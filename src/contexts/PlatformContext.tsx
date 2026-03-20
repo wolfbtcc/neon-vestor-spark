@@ -17,13 +17,14 @@ interface PlatformState {
 
 interface PlatformContextType extends PlatformState {
   login: (email: string, password: string) => boolean;
-  register: (name: string, email: string, password: string, referralCode?: string) => boolean;
+  register: (name: string, email: string, password: string, referralCode?: string, phone?: string, phoneCountry?: string) => boolean;
   logout: () => void;
   deposit: (amount: number, method: 'pix' | 'usdt') => Deposit;
   invest: (amount: number, durationDays: number, returnPercent: number) => boolean;
   withdraw: (amount: number) => boolean;
   redeemCycle: (investmentId: string) => boolean;
   updateUserBalance: (userId: string, amount: number) => void;
+  updateUserName: (newName: string) => void;
   loyaltyDays: number;
 }
 
