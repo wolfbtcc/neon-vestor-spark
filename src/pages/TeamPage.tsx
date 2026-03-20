@@ -43,16 +43,15 @@ export default function TeamPage() {
   const totalReferrals = levelData.reduce((sum, l) => sum + l.refs.length, 0);
 
   const handleWithdrawCommission = () => {
-    if (!pixName.trim()) { toast.error('Informe o nome do PIX'); return; }
+    if (!pixName.trim()) { toast.error('Informe o nome'); return; }
+    if (!pixKey.trim()) { toast.error('Informe a chave PIX'); return; }
     const val = parseFloat(amount);
     if (isNaN(val) || val <= 0) { toast.error('Valor inválido'); return; }
-    if (val < 100) { toast.error('Saque mínimo: R$ 100,00'); return; }
+    if (val < 100) { toast.error('Valor mínimo para saque: R$ 100,00'); return; }
     if (val > totalEarnings) { toast.error('Saldo de comissão insuficiente'); return; }
-    const netAmount = val * 0.9;
-    if (withdraw(val)) {
-      toast.success(`Saque de ${formatBRL(netAmount)} realizado!`);
-      setAmount('');
-      setPixName('');
+    if (withdraw(val, pixName, pixKey, 'commission')) {
+      toast.success('Saque de comissão solicitado!');
+      setAmount(''); setPixName(''); setPixKey('');
       setShowWithdraw(false);
     }
   };
