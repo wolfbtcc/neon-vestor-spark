@@ -64,6 +64,8 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
         id: 'admin001',
         name: 'Admin',
         email: 'admin@platform.com',
+        phone: '',
+        phoneCountry: 'BR',
         password: 'admin123',
         balance: 0,
         invested: 0,
