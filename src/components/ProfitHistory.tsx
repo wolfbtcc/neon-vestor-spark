@@ -46,19 +46,19 @@ export default function ProfitHistory() {
               return (
                 <div
                   key={entry.id}
-                  className="flex items-center gap-2 p-1.5 rounded-lg border border-border/50 bg-neon-cyan/[0.02]"
+                  className="flex items-center gap-3 p-3 rounded-xl border border-border/50 bg-neon-cyan/[0.03]"
                 >
-                  <div className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0">
-                    <img src={robotIcon} alt="VX1" className="w-6 h-6" />
+                  <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0">
+                    <img src={robotIcon} alt="VX1" className="w-10 h-10" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="font-mono-data text-neon-green font-semibold text-[11px]">
+                    <span className="font-mono-data text-neon-green font-bold text-sm">
                       +{formatBRL(entry.net)}
                     </span>
-                    <div className="flex items-center gap-1.5">
-                      <span className="text-[9px] text-muted-foreground">{dateStr}</span>
-                      <span className="text-[9px] text-muted-foreground">•</span>
-                      <span className="text-[9px] text-muted-foreground">{timeStr}</span>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="text-[11px] text-muted-foreground">{dateStr}</span>
+                      <span className="text-[11px] text-muted-foreground">•</span>
+                      <span className="text-[11px] text-muted-foreground">{timeStr}</span>
                     </div>
                   </div>
                 </div>

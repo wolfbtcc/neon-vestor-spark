@@ -263,7 +263,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
   const invest = useCallback((amount: number, durationDays: number, returnPercent: number): boolean => {
     let success = false;
     setState(prev => {
-      if (!prev.user || prev.user.balance < amount || amount <= 0) return prev;
+      if (!prev.user || amount <= 0 || prev.user.balance < amount - 0.01) return prev;
       success = true;
       const cycleNumber = prev.investments.filter(i => i.userId === prev.user!.id).length + 1;
       const inv: Investment = {
