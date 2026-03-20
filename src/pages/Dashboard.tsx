@@ -23,15 +23,8 @@ export default function Dashboard() {
     return null;
   }
 
-  const completedCycles = investments.filter(i => i.userId === user.id && i.status === 'completed');
-
   const handleRedeem = () => {
-    if (completedCycles.length === 0) {
-      toast.error('Nenhum ciclo completo para resgatar.');
-      return;
-    }
-    completedCycles.forEach(c => redeemCycle(c.id));
-    toast.success(`${completedCycles.length} ciclo(s) resgatado(s)!`);
+    navigate('/redeem');
   };
 
   return (
