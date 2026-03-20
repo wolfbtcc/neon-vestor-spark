@@ -48,7 +48,7 @@ export default function DashboardCards() {
               <Icon className="w-5 h-5 flex-shrink-0 text-neon-cyan opacity-70" />
             </div>
             <p
-              className={`font-bold font-mono-data leading-tight overflow-hidden text-ellipsis whitespace-nowrap text-xl text-neon-cyan text-glow-cyan ${card.highlight ? 'animate-pulse-neon' : ''}`}
+              className={`font-bold font-mono-data leading-tight overflow-hidden text-ellipsis whitespace-nowrap text-xl text-neon-cyan ${card.highlight ? 'animate-pulse-neon' : ''}`}
             >
               {card.value}
             </p>
