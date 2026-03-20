@@ -118,20 +118,21 @@ export default function TeamPage() {
             <p className="text-xs text-muted-foreground">Comissão disponível: <span className="font-mono-data text-neon-cyan">{formatBRL(totalEarnings)}</span></p>
             <p className="text-[10px] text-muted-foreground">Disponível diariamente • Mínimo R$ 100</p>
             <div>
-              <label className="text-[11px] tracking-widest text-muted-foreground mb-1 block uppercase">Nome (PIX)</label>
-              <input
-                type="text" value={pixName} onChange={e => setPixName(e.target.value)} placeholder="Seu nome completo"
-                className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-neon-cyan/50 focus:outline-none focus:ring-1 focus:ring-neon-cyan/30 text-sm transition-all"
-              />
+              <label className="text-[11px] tracking-widest text-muted-foreground mb-1 block uppercase">Nome Completo</label>
+              <input type="text" value={pixName} onChange={e => setPixName(e.target.value)} placeholder="Seu nome completo"
+                className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-neon-cyan/50 focus:outline-none focus:ring-1 focus:ring-neon-cyan/30 text-sm transition-all" />
+            </div>
+            <div>
+              <label className="text-[11px] tracking-widest text-muted-foreground mb-1 block uppercase">Chave PIX</label>
+              <input type="text" value={pixKey} onChange={e => setPixKey(e.target.value)} placeholder="CPF, email, telefone ou chave aleatória"
+                className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-neon-cyan/50 focus:outline-none focus:ring-1 focus:ring-neon-cyan/30 text-sm transition-all" />
             </div>
             <div>
               <label className="text-[11px] tracking-widest text-muted-foreground mb-1 block uppercase">Valor</label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
-                <input
-                  type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Mínimo 100,00"
-                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-muted border border-border focus:border-neon-cyan/50 focus:outline-none focus:ring-1 focus:ring-neon-cyan/30 font-mono-data text-lg transition-all"
-                />
+                <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Mínimo 100,00"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-muted border border-border focus:border-neon-cyan/50 focus:outline-none focus:ring-1 focus:ring-neon-cyan/30 font-mono-data text-lg transition-all" />
               </div>
             </div>
             <button onClick={handleWithdrawCommission}

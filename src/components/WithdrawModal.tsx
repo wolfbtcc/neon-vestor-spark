@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { usePlatform } from '@/contexts/PlatformContext';
 import { formatBRL } from '@/lib/platform';
-import { X, DollarSign, Wallet, Lock, CalendarCheck } from 'lucide-react';
+import { X, DollarSign, Wallet, Lock, CalendarCheck, Clock } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface WithdrawModalProps {
@@ -23,14 +23,12 @@ function isPoolWithdrawAvailable(): { available: boolean; message: string } {
   const totalMinutes = hours * 60 + minutes;
 
   if (day === 5) {
-    // 00:00 até 22:09 (22*60+9 = 1329 minutos)
     if (totalMinutes <= 1329) {
       return { available: true, message: 'Pool liberado hoje até 22:09 (horário de Brasília).' };
     }
     return { available: false, message: 'Janela do Pool encerrada hoje às 22:09. Aguarde o dia 5 do próximo mês.' };
   }
 
-  // Calculate next day 5
   const currentMonth = now.getMonth();
   const currentYear = now.getFullYear();
   let nextDate: Date;
@@ -48,6 +46,7 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
   const { user, withdraw, invest, withdrawals } = usePlatform();
   const [mode, setMode] = useState<'choose' | 'profits' | 'pool'>('choose');
   const [pixName, setPixName] = useState('');
+  const [pixKey, setPixKey] = useState('');
   const [amount, setAmount] = useState('');
 
   if (!open || !user) return null;
@@ -59,26 +58,24 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
   const poolNet = poolEarnings - poolFee;
 
   const handleWithdrawProfits = () => {
-    if (!pixName.trim()) { toast.error('Informe o nome do PIX'); return; }
+    if (!pixName.trim()) { toast.error('Informe o nome'); return; }
+    if (!pixKey.trim()) { toast.error('Informe a chave PIX'); return; }
     const val = parseFloat(amount);
     if (isNaN(val) || val <= 0) { toast.error('Valor inválido'); return; }
-    if (val < 100) { toast.error('Saque mínimo: R$ 100,00'); return; }
+    if (val < 100) { toast.error('Valor mínimo para saque: R$ 100,00'); return; }
     if (val > user.profits) { toast.error('Saldo de lucros insuficiente'); return; }
-    const netAmount = val * 0.9;
-    if (withdraw(val)) {
-      toast.success(`Saque de ${formatBRL(netAmount)} realizado!`);
-      setAmount('');
-      setPixName('');
+    if (withdraw(val, pixName, pixKey, 'profits')) {
+      toast.success('Saque solicitado com sucesso!');
+      setAmount(''); setPixName(''); setPixKey('');
       setMode('choose');
-      onClose();
     }
   };
 
   const handlePoolWithdraw = () => {
     if (!poolStatus.available) return;
     if (poolNet <= 0) { toast.error('Sem rendimentos disponíveis no Pool.'); return; }
-    if (withdraw(poolEarnings)) {
-      toast.success(`Saque Pool VX1: ${formatBRL(poolNet)} (taxa 15%: ${formatBRL(poolFee)})`);
+    if (withdraw(poolEarnings, '', '', 'pool')) {
+      toast.success('Saque Pool VX1 solicitado!');
       setMode('choose');
       onClose();
     }
@@ -88,7 +85,7 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
     if (!poolStatus.available) return;
     if (poolNet <= 0) { toast.error('Sem rendimentos disponíveis no Pool.'); return; }
     if (invest(poolNet, 30, 200)) {
-      toast.success(`Reinvestido: ${formatBRL(poolNet)} no ciclo 30 dias (taxa 15%: ${formatBRL(poolFee)})`);
+      toast.success(`Reinvestido: ${formatBRL(poolNet)} no ciclo 30 dias`);
       setMode('choose');
       onClose();
     }
@@ -96,10 +93,11 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
 
   const reset = () => {
     setMode('choose');
-    setPixName('');
-    setAmount('');
+    setPixName(''); setPixKey(''); setAmount('');
     onClose();
   };
+
+  const FORTY_EIGHT_HOURS = 48 * 60 * 60 * 1000;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={reset}>
@@ -110,16 +108,12 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
         </button>
         <h2 className="text-lg font-display font-bold mb-4 gradient-text-cyan tracking-wide">SACAR</h2>
 
-        {/* Step 1: Choose type */}
         {mode === 'choose' && (
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground mb-1">Escolha o tipo de saque:</p>
 
-            {/* Option 1: Withdraw profits */}
-            <button
-              onClick={() => setMode('profits')}
-              className="w-full p-4 rounded-xl border border-border hover:border-neon-cyan/50 hover:bg-neon-cyan/5 transition-all active:scale-[0.97] text-left"
-            >
+            <button onClick={() => setMode('profits')}
+              className="w-full p-4 rounded-xl border border-border hover:border-neon-cyan/50 hover:bg-neon-cyan/5 transition-all active:scale-[0.97] text-left">
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-full bg-neon-cyan/10 flex items-center justify-center flex-shrink-0">
                   <Wallet className="w-5 h-5 text-neon-cyan" />
@@ -132,27 +126,19 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
               </div>
             </button>
 
-            {/* Option 2: Withdraw pool */}
-            <button
-              onClick={() => setMode('pool')}
-              className="w-full p-4 rounded-xl border border-border hover:border-neon-cyan/50 hover:bg-neon-cyan/5 transition-all active:scale-[0.97] text-left"
-            >
+            <button onClick={() => setMode('pool')}
+              className="w-full p-4 rounded-xl border border-border hover:border-neon-cyan/50 hover:bg-neon-cyan/5 transition-all active:scale-[0.97] text-left">
               <div className="flex items-center gap-3">
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${poolStatus.available ? 'bg-neon-green/10' : 'bg-muted'}`}>
-                  {poolStatus.available ? (
-                    <CalendarCheck className="w-5 h-5 text-neon-green" />
-                  ) : (
-                    <Lock className="w-5 h-5 text-muted-foreground" />
-                  )}
+                  {poolStatus.available ? <CalendarCheck className="w-5 h-5 text-neon-green" /> : <Lock className="w-5 h-5 text-muted-foreground" />}
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-foreground">Sacar Pool VX1</p>
                   <p className="text-[10px] text-muted-foreground">Liberado dia 5 de cada mês • 00:00–22:09</p>
-                  {poolStatus.available ? (
-                    <p className="text-[10px] text-neon-green mt-0.5 font-semibold">🟢 Liberado agora</p>
-                  ) : (
-                    <p className="text-[10px] text-destructive mt-0.5">🔒 Bloqueado</p>
-                  )}
+                  {poolStatus.available
+                    ? <p className="text-[10px] text-neon-green mt-0.5 font-semibold">🟢 Liberado agora</p>
+                    : <p className="text-[10px] text-destructive mt-0.5">🔒 Bloqueado</p>
+                  }
                 </div>
               </div>
             </button>
@@ -164,10 +150,12 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
                 <div className="space-y-2 max-h-40 overflow-y-auto">
                   {userWithdrawals.map(w => {
                     const d = new Date(w.createdAt);
+                    const isPending = w.status === 'pending';
+                    const willConfirmAt = w.createdAt + FORTY_EIGHT_HOURS;
                     return (
                       <div key={w.id} className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 border border-border">
                         <div className="w-8 h-8 rounded-full bg-neon-cyan/10 flex items-center justify-center flex-shrink-0">
-                          <DollarSign className="w-4 h-4 text-neon-cyan" />
+                          {isPending ? <Clock className="w-4 h-4 text-yellow-400" /> : <DollarSign className="w-4 h-4 text-neon-cyan" />}
                         </div>
                         <div className="flex-1 min-w-0">
                           <p className="font-mono-data text-sm font-bold text-foreground">{formatBRL(w.amount * 0.9)}</p>
@@ -175,8 +163,12 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
                             {d.toLocaleDateString('pt-BR')} às {d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
                           </p>
                         </div>
-                        <span className="text-[10px] px-2 py-0.5 rounded-full bg-neon-green/10 text-neon-green border border-neon-green/20">
-                          {w.status === 'completed' ? 'Concluído' : 'Pendente'}
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
+                          isPending
+                            ? 'bg-yellow-400/10 text-yellow-400 border-yellow-400/20'
+                            : 'bg-neon-green/10 text-neon-green border-neon-green/20'
+                        }`}>
+                          {isPending ? 'Pendente' : 'Concluído'}
                         </span>
                       </div>
                     );
@@ -187,46 +179,37 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
           </div>
         )}
 
-        {/* Step 2a: Withdraw profits */}
+        {/* Withdraw profits */}
         {mode === 'profits' && (
           <div className="space-y-3">
             <p className="text-xs text-muted-foreground">Lucros disponíveis: <span className="font-mono-data text-neon-cyan">{formatBRL(user.profits)}</span></p>
             <div>
-              <label className="text-[11px] tracking-widest text-muted-foreground mb-1 block uppercase">Nome (PIX)</label>
-              <input
-                type="text"
-                value={pixName}
-                onChange={e => setPixName(e.target.value)}
-                placeholder="Seu nome completo"
-                className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-neon-cyan/50 focus:outline-none focus:ring-1 focus:ring-neon-cyan/30 text-sm transition-all"
-              />
+              <label className="text-[11px] tracking-widest text-muted-foreground mb-1 block uppercase">Nome Completo</label>
+              <input type="text" value={pixName} onChange={e => setPixName(e.target.value)} placeholder="Seu nome completo"
+                className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-neon-cyan/50 focus:outline-none focus:ring-1 focus:ring-neon-cyan/30 text-sm transition-all" />
             </div>
             <div>
-              <label className="text-[11px] tracking-widest text-muted-foreground mb-1 block uppercase">Valor do saque</label>
+              <label className="text-[11px] tracking-widest text-muted-foreground mb-1 block uppercase">Chave PIX</label>
+              <input type="text" value={pixKey} onChange={e => setPixKey(e.target.value)} placeholder="CPF, email, telefone ou chave aleatória"
+                className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-neon-cyan/50 focus:outline-none focus:ring-1 focus:ring-neon-cyan/30 text-sm transition-all" />
+            </div>
+            <div>
+              <label className="text-[11px] tracking-widest text-muted-foreground mb-1 block uppercase">Valor do Saque</label>
               <div className="relative">
                 <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
-                <input
-                  type="number"
-                  value={amount}
-                  onChange={e => setAmount(e.target.value)}
-                  placeholder="Mínimo 100,00"
-                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-muted border border-border focus:border-neon-cyan/50 focus:outline-none focus:ring-1 focus:ring-neon-cyan/30 font-mono-data text-lg transition-all"
-                />
+                <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Mínimo 100,00"
+                  className="w-full pl-10 pr-4 py-3 rounded-xl bg-muted border border-border focus:border-neon-cyan/50 focus:outline-none focus:ring-1 focus:ring-neon-cyan/30 font-mono-data text-lg transition-all" />
               </div>
             </div>
-            <button
-              onClick={handleWithdrawProfits}
-              className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-semibold hover:brightness-110 transition-all active:scale-[0.98] glow-cyan"
-            >
+            <button onClick={handleWithdrawProfits}
+              className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-semibold hover:brightness-110 transition-all active:scale-[0.98] glow-cyan">
               Sacar
             </button>
-            <button onClick={() => setMode('choose')} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-              ← Voltar
-            </button>
+            <button onClick={() => setMode('choose')} className="text-xs text-muted-foreground hover:text-foreground transition-colors">← Voltar</button>
           </div>
         )}
 
-        {/* Step 2b: Pool withdraw */}
+        {/* Pool withdraw */}
         {mode === 'pool' && (
           <div className="space-y-4">
             {!poolStatus.available ? (
@@ -247,35 +230,19 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
                   <p className="text-[11px] text-muted-foreground">{poolStatus.message}</p>
                 </div>
 
-                {poolEarnings > 0 && (
-                  <div className="p-3 rounded-xl bg-neon-cyan/5 border border-neon-cyan/15 text-xs space-y-1">
-                    <p>Rendimentos: <span className="font-mono-data font-bold text-neon-cyan">{formatBRL(poolEarnings)}</span></p>
-                    <p className="text-muted-foreground">Taxa 15%: -{formatBRL(poolFee)} → Líquido: <span className="text-neon-green font-bold">{formatBRL(poolNet)}</span></p>
-                  </div>
-                )}
-
                 <div className="flex gap-2">
-                  <button
-                    onClick={handlePoolWithdraw}
-                    disabled={poolNet <= 0}
-                    className="flex-1 py-3 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:brightness-110 transition-all active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none glow-cyan"
-                  >
+                  <button onClick={handlePoolWithdraw} disabled={poolNet <= 0}
+                    className="flex-1 py-3 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:brightness-110 transition-all active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none glow-cyan">
                     Sacar Pool
                   </button>
-                  <button
-                    onClick={handlePoolReinvest}
-                    disabled={poolNet <= 0}
-                    className="flex-1 py-3 rounded-xl text-xs font-semibold border border-primary/40 text-primary hover:bg-primary/10 transition-all active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none"
-                  >
+                  <button onClick={handlePoolReinvest} disabled={poolNet <= 0}
+                    className="flex-1 py-3 rounded-xl text-xs font-semibold border border-primary/40 text-primary hover:bg-primary/10 transition-all active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none">
                     Reinvestir
                   </button>
                 </div>
               </>
             )}
-
-            <button onClick={() => setMode('choose')} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-              ← Voltar
-            </button>
+            <button onClick={() => setMode('choose')} className="text-xs text-muted-foreground hover:text-foreground transition-colors">← Voltar</button>
           </div>
         )}
       </div>

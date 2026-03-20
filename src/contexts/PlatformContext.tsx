@@ -156,12 +156,14 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     return () => clearInterval(interval);
   }, [persist]);
 
-  // Check completed cycles every 5s
+  // Check completed cycles & pending withdrawals every 5s
   useEffect(() => {
     const interval = setInterval(() => {
       setState(prev => {
         const now = Date.now();
         let changed = false;
+        const FORTY_EIGHT_HOURS = 48 * 60 * 60 * 1000;
+
         const updatedInvestments = prev.investments.map(inv => {
           if (inv.status === 'active' && now >= inv.endDate) {
             changed = true;
@@ -169,9 +171,19 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
           }
           return inv;
         });
+
+        // Auto-confirm withdrawals after 48h
+        const updatedWithdrawals = prev.withdrawals.map(w => {
+          if (w.status === 'pending' && now - w.createdAt >= FORTY_EIGHT_HOURS) {
+            changed = true;
+            return { ...w, status: 'completed' as const };
+          }
+          return w;
+        });
+
         if (!changed) return prev;
-        persist(prev.allUsers, updatedInvestments, prev.deposits, prev.withdrawals, prev.commissions, prev.profitHistory);
-        return { ...prev, investments: updatedInvestments };
+        persist(prev.allUsers, updatedInvestments, prev.deposits, updatedWithdrawals, prev.commissions, prev.profitHistory);
+        return { ...prev, investments: updatedInvestments, withdrawals: updatedWithdrawals };
       });
     }, 5000);
     return () => clearInterval(interval);
