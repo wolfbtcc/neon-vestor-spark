@@ -21,7 +21,7 @@ interface PlatformContextType extends PlatformState {
   logout: () => void;
   deposit: (amount: number, method: 'pix' | 'usdt') => Deposit;
   invest: (amount: number, durationDays: number, returnPercent: number) => boolean;
-  withdraw: (amount: number) => boolean;
+  withdraw: (amount: number, pixName?: string, pixKey?: string, type?: 'profits' | 'commission' | 'pool') => boolean;
   redeemCycle: (investmentId: string) => boolean;
   updateUserBalance: (userId: string, amount: number) => void;
   updateUserName: (newName: string) => void;
