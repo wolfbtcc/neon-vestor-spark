@@ -1,15 +1,37 @@
 import { usePlatform } from '@/contexts/PlatformContext';
+import { formatBRL } from '@/lib/platform';
+import { toast } from 'sonner';
+
+const POOL_FEE = 0.15; // 15%
 
 export default function LoyaltyPool() {
-  const { loyaltyDays } = usePlatform();
+  const { user, loyaltyDays, withdraw, invest } = usePlatform();
   const progress = (loyaltyDays / 7) * 100;
+  const canAct = loyaltyDays >= 7;
+  const earnings = user?.profits ?? 0;
+  const feeAmount = earnings * POOL_FEE;
+  const netAmount = earnings - feeAmount;
+
+  const handleWithdrawPool = () => {
+    if (!canAct || netAmount <= 0) return;
+    if (withdraw(netAmount)) {
+      toast.success(`Saque Pool VX1: ${formatBRL(netAmount)} (taxa 15%: ${formatBRL(feeAmount)})`);
+    }
+  };
+
+  const handleReinvest = () => {
+    if (!canAct || netAmount <= 0) return;
+    if (invest(netAmount, 30, 200)) {
+      toast.success(`Reinvestido: ${formatBRL(netAmount)} no ciclo 30 dias (taxa 15%: ${formatBRL(feeAmount)})`);
+    }
+  };
 
   return (
     <div className="neon-card">
-      <h3 className="text-lg font-semibold mb-4">Loyalty Pool</h3>
+      <h3 className="text-lg font-semibold mb-4">Pool VX1</h3>
       <div className="space-y-3">
         <div className="flex justify-between text-sm">
-          <span className="text-muted-foreground">Progresso</span>
+          <span className="text-muted-foreground">Progresso de fidelidade</span>
           <span className="font-mono-data text-neon-green">{loyaltyDays}/7 dias</span>
         </div>
         <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
@@ -22,11 +44,36 @@ export default function LoyaltyPool() {
             }}
           />
         </div>
-        <p className="text-xs text-muted-foreground">
-          {loyaltyDays >= 7
-            ? '✅ Saque e reinvestimento disponíveis!'
-            : `Saque/reinvestimento disponível após 7 dias de fidelidade.`}
-        </p>
+
+        {canAct && earnings > 0 && (
+          <div className="p-3 rounded-lg bg-neon-green/5 border border-neon-green/20 text-sm space-y-1">
+            <p>Rendimentos: <span className="font-mono-data font-bold">{formatBRL(earnings)}</span></p>
+            <p className="text-xs text-muted-foreground">Taxa de 15%: -{formatBRL(feeAmount)} → Líquido: <span className="text-neon-green font-bold">{formatBRL(netAmount)}</span></p>
+          </div>
+        )}
+
+        {canAct ? (
+          <div className="flex gap-2">
+            <button
+              onClick={handleWithdrawPool}
+              disabled={netAmount <= 0}
+              className="flex-1 py-2 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:brightness-110 transition-all active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none glow-green"
+            >
+              Sacar
+            </button>
+            <button
+              onClick={handleReinvest}
+              disabled={netAmount <= 0}
+              className="flex-1 py-2 rounded-lg text-sm font-semibold border border-primary/40 text-primary hover:bg-primary/10 transition-all active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none"
+            >
+              Reinvestir
+            </button>
+          </div>
+        ) : (
+          <p className="text-xs text-muted-foreground">
+            Saque/reinvestimento disponível após 7 dias. Taxa de 15% sobre rendimentos.
+          </p>
+        )}
       </div>
     </div>
   );
