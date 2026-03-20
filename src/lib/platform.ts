@@ -65,6 +65,9 @@ export interface Withdrawal {
   id: string;
   userId: string;
   amount: number;
+  pixName: string;
+  pixKey: string;
+  type: 'profits' | 'commission' | 'pool';
   status: 'pending' | 'completed';
   createdAt: number;
 }
