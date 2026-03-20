@@ -75,7 +75,15 @@ export default function DepositModal({ open, onClose }: DepositModalProps) {
   };
 
   const handlePixDeposit = () => {
-    if (!selectedAmount) return;
+    if (!selectedAmount || !receipt || !receiptHash) {
+      toast.error('Anexe o comprovante para continuar.');
+      return;
+    }
+    // Save hash
+    const usedHashes = getUsedHashes();
+    usedHashes.push(receiptHash);
+    localStorage.setItem(usedHashesKey, JSON.stringify(usedHashes));
+
     setStep('processing');
     toast.info('Depósito confirmado, aguarde processamento...');
     setTimeout(() => {
