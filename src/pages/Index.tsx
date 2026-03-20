@@ -31,10 +31,18 @@ const storyData = [
 export default function Index() {
   const { user } = usePlatform();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const refCode = searchParams.get('ref') || '';
 
   useEffect(() => {
     if (user) navigate('/dashboard');
   }, [user, navigate]);
+
+  const goAuth = (mode: string) => {
+    const params = new URLSearchParams({ mode });
+    if (refCode) params.set('ref', refCode);
+    navigate(`/auth?${params.toString()}`);
+  };
 
   return (
     <div className="min-h-screen relative overflow-x-hidden">
