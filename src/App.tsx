@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import AdminPage from "./pages/AdminPage";
 import ProfilePage from "./pages/ProfilePage";
 import TeamPage from "./pages/TeamPage";
+import RedeemPage from "./pages/RedeemPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
