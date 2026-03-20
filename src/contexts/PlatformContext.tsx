@@ -45,7 +45,6 @@ function saveState(data: ReturnType<typeof loadState>) {
 export function PlatformProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<PlatformState>(() => {
     const stored = loadState();
-    // Seed admin if none exists
     if (!stored.users.some(u => u.isAdmin)) {
       stored.users.push({
         id: 'admin001',
@@ -76,7 +75,6 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     saveState({ users, investments, deposits, withdrawals, commissions });
   }, []);
 
-  // Check & complete investments periodically
   useEffect(() => {
     const interval = setInterval(() => {
       setState(prev => {
@@ -149,85 +147,76 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     setState(prev => {
       if (!prev.user) return prev;
       dep.userId = prev.user.id;
-      const newDeposits = [...prev.deposits, dep];
+      const confirmedDep = { ...dep, status: 'confirmed' as const };
+      const newDeposits = [...prev.deposits, confirmedDep];
 
-      // Auto-confirm after 3 seconds
-      setTimeout(() => {
-        setState(inner => {
-          const confirmedDeposits = inner.deposits.map(d => d.id === dep.id ? { ...d, status: 'confirmed' as const } : d);
-          const updatedUsers = inner.allUsers.map(u => u.id === inner.user?.id ? { ...u, balance: u.balance + amount } : u);
-          const updatedUser = inner.user ? { ...inner.user, balance: inner.user.balance + amount } : null;
+      // Credit to invested (capital investido)
+      const updatedUser = { ...prev.user, balance: prev.user.balance + amount, invested: prev.user.invested + amount };
+      const updatedUsers = prev.allUsers.map(u => u.id === prev.user!.id ? updatedUser : u);
 
-          // Process affiliate commissions
-          let newCommissions = [...inner.commissions];
-          let currentReferrerId = inner.user?.referredBy;
-          for (let level = 0; level < COMMISSION_LEVELS.length && currentReferrerId; level++) {
-            const referrer = updatedUsers.find(u => u.id === currentReferrerId);
-            if (!referrer) break;
-            const commAmount = amount * (COMMISSION_LEVELS[level] / 100);
-            newCommissions.push({
-              id: generateId(),
-              userId: referrer.id,
-              fromUserId: inner.user!.id,
-              fromUserName: inner.user!.name,
-              level: level + 1,
-              amount: commAmount,
-              createdAt: Date.now(),
-            });
-            const idx = updatedUsers.findIndex(u => u.id === referrer.id);
-            if (idx !== -1) {
-              updatedUsers[idx] = { ...updatedUsers[idx], balance: updatedUsers[idx].balance + commAmount };
-            }
-            currentReferrerId = referrer.referredBy;
-          }
-
-          persist(updatedUsers, inner.investments, confirmedDeposits, inner.withdrawals, newCommissions);
-          return { ...inner, user: updatedUser, allUsers: updatedUsers, deposits: confirmedDeposits, commissions: newCommissions };
+      // Process affiliate commissions
+      let newCommissions = [...prev.commissions];
+      let currentReferrerId = prev.user.referredBy;
+      for (let level = 0; level < COMMISSION_LEVELS.length && currentReferrerId; level++) {
+        const referrer = updatedUsers.find(u => u.id === currentReferrerId);
+        if (!referrer) break;
+        const commAmount = amount * (COMMISSION_LEVELS[level] / 100);
+        newCommissions.push({
+          id: generateId(),
+          userId: referrer.id,
+          fromUserId: prev.user.id,
+          fromUserName: prev.user.name,
+          level: level + 1,
+          amount: commAmount,
+          createdAt: Date.now(),
         });
-      }, 3000);
+        const idx = updatedUsers.findIndex(u => u.id === referrer.id);
+        if (idx !== -1) {
+          updatedUsers[idx] = { ...updatedUsers[idx], balance: updatedUsers[idx].balance + commAmount };
+        }
+        currentReferrerId = referrer.referredBy;
+      }
 
-      persist(prev.allUsers, prev.investments, newDeposits, prev.withdrawals, prev.commissions);
-      return { ...prev, deposits: newDeposits };
+      persist(updatedUsers, prev.investments, newDeposits, prev.withdrawals, newCommissions);
+      return { ...prev, user: updatedUser, allUsers: updatedUsers, deposits: newDeposits, commissions: newCommissions };
     });
     return dep;
   }, [persist]);
 
   const invest = useCallback((amount: number, durationDays: number, returnPercent: number): boolean => {
-    return (() => {
-      let success = false;
-      setState(prev => {
-        if (!prev.user || prev.user.balance < amount || amount <= 0) return prev;
-        success = true;
-        const cycleNumber = prev.investments.filter(i => i.userId === prev.user!.id).length + 1;
-        const inv: Investment = {
-          id: generateId(),
-          userId: prev.user.id,
-          amount,
-          cycleNumber,
-          durationDays,
-          returnPercent,
-          startDate: Date.now(),
-          endDate: Date.now() + durationDays * 86400000,
-          status: 'active',
-          profit: amount * (returnPercent / 100),
-        };
-        const updatedUser = { ...prev.user, balance: prev.user.balance - amount, invested: prev.user.invested + amount };
-        const updatedUsers = prev.allUsers.map(u => u.id === prev.user!.id ? updatedUser : u);
-        const newInvestments = [...prev.investments, inv];
-        persist(updatedUsers, newInvestments, prev.deposits, prev.withdrawals, prev.commissions);
-        return { ...prev, user: updatedUser, allUsers: updatedUsers, investments: newInvestments };
-      });
-      return success;
-    })();
+    let success = false;
+    setState(prev => {
+      if (!prev.user || prev.user.balance < amount || amount <= 0) return prev;
+      success = true;
+      const cycleNumber = prev.investments.filter(i => i.userId === prev.user!.id).length + 1;
+      const inv: Investment = {
+        id: generateId(),
+        userId: prev.user.id,
+        amount,
+        cycleNumber,
+        durationDays,
+        returnPercent,
+        startDate: Date.now(),
+        endDate: Date.now() + durationDays * 86400000,
+        status: 'active',
+        profit: amount * (returnPercent / 100),
+      };
+      const updatedUser = { ...prev.user, balance: prev.user.balance - amount };
+      const updatedUsers = prev.allUsers.map(u => u.id === prev.user!.id ? updatedUser : u);
+      const newInvestments = [...prev.investments, inv];
+      persist(updatedUsers, newInvestments, prev.deposits, prev.withdrawals, prev.commissions);
+      return { ...prev, user: updatedUser, allUsers: updatedUsers, investments: newInvestments };
+    });
+    return success;
   }, [persist]);
 
   const withdraw = useCallback((amount: number): boolean => {
     let success = false;
     setState(prev => {
-      if (!prev.user || prev.user.balance < amount || amount <= 0) return prev;
+      if (!prev.user || prev.user.profits < amount || amount <= 0) return prev;
       success = true;
       const w: Withdrawal = { id: generateId(), userId: prev.user.id, amount, status: 'completed', createdAt: Date.now() };
-      const updatedUser = { ...prev.user, balance: prev.user.balance - amount };
+      const updatedUser = { ...prev.user, profits: prev.user.profits - amount };
       const updatedUsers = prev.allUsers.map(u => u.id === prev.user!.id ? updatedUser : u);
       const newWithdrawals = [...prev.withdrawals, w];
       persist(updatedUsers, prev.investments, prev.deposits, newWithdrawals, prev.commissions);
@@ -261,7 +250,6 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     });
   }, [persist]);
 
-  // Auto-login
   useEffect(() => {
     const uid = localStorage.getItem('neon_current_user');
     if (uid) {
