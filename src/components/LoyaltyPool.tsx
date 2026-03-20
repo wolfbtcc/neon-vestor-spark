@@ -3,8 +3,6 @@ import { formatBRL } from '@/lib/platform';
 import { toast } from 'sonner';
 import { Lock, CalendarCheck } from 'lucide-react';
 
-const POOL_FEE = 0.15;
-
 function getBrazilNow(): Date {
   return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
 }
@@ -23,26 +21,29 @@ function getPoolStatus() {
 }
 
 export default function LoyaltyPool() {
-  const { user, withdraw, invest } = usePlatform();
-  const earnings = user?.profits ?? 0;
-  const feeAmount = earnings * POOL_FEE;
-  const netAmount = earnings - feeAmount;
+  const { user, profitHistory, withdraw, invest } = usePlatform();
   const { available, daysLeft } = getPoolStatus();
 
-  // Progress bar based on net earnings relative to total earnings
-  const barProgress = earnings > 0 ? (netAmount / earnings) * 100 : 0;
+  // Pool balance = sum of all fees from profit history
+  const poolBalance = profitHistory
+    .filter(p => p.userId === user?.id)
+    .reduce((sum, p) => sum + p.fee, 0);
+
+  // Progress bar grows with each yield entry (capped at 100%)
+  const entryCount = profitHistory.filter(p => p.userId === user?.id).length;
+  const barProgress = Math.min(entryCount * 2, 100);
 
   const handleWithdrawPool = () => {
-    if (!available || netAmount <= 0) return;
-    if (withdraw(netAmount)) {
-      toast.success(`Saque Pool VX1: ${formatBRL(netAmount)} (taxa 15%: ${formatBRL(feeAmount)})`);
+    if (!available || poolBalance <= 0) return;
+    if (withdraw(poolBalance)) {
+      toast.success(`Saque Pool VX1: ${formatBRL(poolBalance)}`);
     }
   };
 
   const handleReinvest = () => {
-    if (!available || netAmount <= 0) return;
-    if (invest(netAmount, 30, 200)) {
-      toast.success(`Reinvestido: ${formatBRL(netAmount)} no ciclo 30 dias (taxa 15%: ${formatBRL(feeAmount)})`);
+    if (!available || poolBalance <= 0) return;
+    if (invest(poolBalance, 30, 200)) {
+      toast.success(`Reinvestido: ${formatBRL(poolBalance)} no ciclo 30 dias`);
     }
   };
 
@@ -50,12 +51,11 @@ export default function LoyaltyPool() {
     <div className="neon-card">
       <h3 className="text-sm font-semibold tracking-widest text-muted-foreground uppercase mb-3">Pool VX1</h3>
       <div className="space-y-3">
-        {/* Earnings with fee */}
-        {earnings > 0 ? (
+        {poolBalance > 0 ? (
           <>
             <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Rendimento bruto</span>
-              <span className="font-mono-data text-neon-cyan font-bold">{formatBRL(earnings)}</span>
+              <span className="text-muted-foreground">Saldo Pool</span>
+              <span className="font-mono-data text-neon-cyan font-bold">{formatBRL(poolBalance)}</span>
             </div>
             <div className="w-full h-2.5 bg-muted rounded-full overflow-hidden">
               <div
@@ -67,16 +67,11 @@ export default function LoyaltyPool() {
                 }}
               />
             </div>
-            <div className="flex justify-between text-[11px]">
-              <span className="text-muted-foreground">Taxa 15%: <span className="text-destructive">-{formatBRL(feeAmount)}</span></span>
-              <span className="text-neon-green font-bold font-mono-data">Líquido: {formatBRL(netAmount)}</span>
-            </div>
           </>
         ) : (
           <p className="text-xs text-muted-foreground">Nenhum rendimento acumulado.</p>
         )}
 
-        {/* Status & actions */}
         {available ? (
           <div className="space-y-3">
             <div className="flex items-center gap-2 text-xs text-neon-green">
@@ -86,14 +81,14 @@ export default function LoyaltyPool() {
             <div className="flex gap-2">
               <button
                 onClick={handleWithdrawPool}
-                disabled={netAmount <= 0}
+                disabled={poolBalance <= 0}
                 className="flex-1 py-2.5 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:brightness-110 transition-all active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none glow-cyan"
               >
                 Sacar
               </button>
               <button
                 onClick={handleReinvest}
-                disabled={netAmount <= 0}
+                disabled={poolBalance <= 0}
                 className="flex-1 py-2.5 rounded-xl text-xs font-semibold border border-primary/40 text-primary hover:bg-primary/10 transition-all active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none"
               >
                 Reinvestir
