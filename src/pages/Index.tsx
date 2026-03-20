@@ -130,7 +130,7 @@ export default function Index() {
         <p className="text-muted-foreground text-sm">Pronto para começar?</p>
         <div className="flex gap-3 justify-center">
           <button
-            onClick={() => navigate('/auth?mode=login')}
+            onClick={() => goAuth('login')}
             className="px-6 py-3 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:brightness-110 transition-all active:scale-[0.97] glow-green"
           >
             Entrar
