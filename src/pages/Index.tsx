@@ -88,7 +88,7 @@ export default function Index() {
 
       {/* Story */}
       <section className="relative z-10 max-w-2xl mx-auto px-4 pb-16 space-y-8">
-        <h2 className="text-2xl sm:text-3xl font-bold text-center gradient-text-neon mb-10" style={{ lineHeight: '1.2' }}>
+        <h2 className="text-2xl sm:text-3xl font-display font-bold text-center gradient-text-cyan mb-10" style={{ lineHeight: '1.2' }}>
           A História da VORTEX
         </h2>
 
