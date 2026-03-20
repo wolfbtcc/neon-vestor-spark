@@ -11,15 +11,15 @@ export default function DashboardCards() {
   const cards = [
     {
       label: 'SALDO DISPONÍVEL',
-      value: formatBRL(user.balance),
-      sub: 'Pronto para sacar ou investir',
+      value: formatBRL(user.profits),
+      sub: 'Apenas lucros disponíveis',
       icon: Wallet,
       highlight: true,
     },
     {
-      label: 'VALOR APLICADO',
+      label: 'CAPITAL INVESTIDO',
       value: formatBRL(user.invested),
-      sub: 'Total investido em ciclos',
+      sub: 'Total depositado em ciclos',
       icon: TrendingUp,
     },
     {
@@ -28,47 +28,55 @@ export default function DashboardCards() {
       sub: 'Rendimentos gerados',
       icon: DollarSign,
     },
-    {
-      label: 'MOTOR VX1',
-      value: activeCycles > 0 ? 'ATIVO' : 'INATIVO',
-      sub: `${activeCycles} ciclo(s) ativo(s)`,
-      icon: Zap,
-      isMotor: true,
-      active: activeCycles > 0,
-    },
   ];
 
   return (
     <div className="space-y-3">
+      {/* Value cards */}
       {cards.map((card, i) => {
         const Icon = card.icon;
         return (
           <div
             key={i}
-            className={`neon-card overflow-hidden opacity-0 animate-fade-up ${card.isMotor && card.active ? 'animate-glow-pulse' : ''}`}
+            className={`neon-card overflow-hidden opacity-0 animate-fade-up`}
             style={{ animationDelay: `${i * 80}ms`, animationFillMode: 'forwards' }}
           >
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
                 {card.label}
               </span>
-              <Icon className={`w-4 h-4 flex-shrink-0 ${card.isMotor && card.active ? 'text-neon-green animate-pulse-glow' : 'text-neon-cyan'} opacity-70`} />
+              <Icon className="w-5 h-5 flex-shrink-0 text-neon-cyan opacity-70" />
             </div>
             <p
-              className={`font-bold font-mono-data leading-tight overflow-hidden text-ellipsis whitespace-nowrap ${
-                card.isMotor
-                  ? card.active
-                    ? 'text-neon-green text-glow-green text-base'
-                    : 'text-muted-foreground text-base'
-                  : 'text-neon-cyan text-glow-cyan text-base'
-              } ${card.highlight ? 'animate-pulse-neon' : ''}`}
+              className={`font-bold font-mono-data leading-tight overflow-hidden text-ellipsis whitespace-nowrap text-xl text-neon-cyan text-glow-cyan ${card.highlight ? 'animate-pulse-neon' : ''}`}
             >
               {card.value}
             </p>
-            <p className="text-[10px] text-muted-foreground mt-0.5">{card.sub}</p>
+            <p className="text-xs text-muted-foreground mt-1">{card.sub}</p>
           </div>
         );
       })}
+
+      {/* Motor VX1 - always visible, fixed card */}
+      <div
+        className={`neon-card overflow-hidden opacity-0 animate-fade-up ${activeCycles > 0 ? 'animate-glow-pulse' : ''}`}
+        style={{ animationDelay: `${3 * 80}ms`, animationFillMode: 'forwards' }}
+      >
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+            MOTOR VX1
+          </span>
+          <Zap className={`w-5 h-5 flex-shrink-0 ${activeCycles > 0 ? 'text-neon-green animate-pulse-glow' : 'text-neon-cyan'} opacity-70`} />
+        </div>
+        <p
+          className={`font-bold font-mono-data leading-tight text-xl ${
+            activeCycles > 0 ? 'text-neon-green text-glow-green' : 'text-muted-foreground'
+          }`}
+        >
+          {activeCycles > 0 ? 'ATIVO' : 'INATIVO'}
+        </p>
+        <p className="text-xs text-muted-foreground mt-1">{activeCycles} ciclo(s) ativo(s)</p>
+      </div>
     </div>
   );
 }
