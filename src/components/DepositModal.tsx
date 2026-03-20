@@ -119,16 +119,22 @@ export default function DepositModal({ open, onClose }: DepositModalProps) {
         {step === 'amount' && (
           <div className="space-y-4">
             <p className="text-xs text-muted-foreground">Selecione o valor do depósito:</p>
-            <div className="grid grid-cols-3 gap-2">
-              {PRESET_AMOUNTS.map(val => (
-                <button
-                  key={val}
-                  onClick={() => { setSelectedAmount(val); setStep('method'); }}
-                  className="p-3 rounded-xl border border-border hover:border-neon-cyan/50 hover:bg-neon-cyan/5 transition-all active:scale-95 text-center"
-                >
-                  <span className="font-mono-data text-sm font-bold text-foreground">{formatBRL(val)}</span>
-                </button>
-              ))}
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {PRESET_AMOUNTS.map(val => {
+                const formatted = formatBRL(val);
+                const isLarge = val >= 10000;
+                return (
+                  <button
+                    key={val}
+                    onClick={() => { setSelectedAmount(val); setStep('method'); }}
+                    className="flex items-center justify-center min-h-[56px] p-3 rounded-xl border border-border hover:border-neon-cyan/50 hover:bg-neon-cyan/5 transition-all active:scale-95 overflow-hidden"
+                  >
+                    <span className={`font-mono-data font-bold text-neon-cyan text-glow-cyan text-center leading-tight ${isLarge ? 'text-[11px]' : 'text-sm'}`}>
+                      {formatted}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}
