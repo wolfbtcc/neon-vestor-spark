@@ -1,6 +1,6 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import {
-  User, Investment, Deposit, Withdrawal, Commission,
+  User, Investment, Deposit, Withdrawal, Commission, ProfitEntry,
   generateId, generateReferralCode, generatePixCode, generateWalletAddress,
   COMMISSION_LEVELS,
 } from '@/lib/platform';
@@ -11,6 +11,7 @@ interface PlatformState {
   deposits: Deposit[];
   withdrawals: Withdrawal[];
   commissions: Commission[];
+  profitHistory: ProfitEntry[];
   allUsers: User[];
 }
 
@@ -29,16 +30,29 @@ interface PlatformContextType extends PlatformState {
 const PlatformContext = createContext<PlatformContextType | null>(null);
 
 const STORAGE_KEY = 'neon_platform_data';
+const POOL_FEE = 0.15;
 
-function loadState(): { users: User[]; investments: Investment[]; deposits: Deposit[]; withdrawals: Withdrawal[]; commissions: Commission[] } {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) return JSON.parse(raw);
-  } catch {}
-  return { users: [], investments: [], deposits: [], withdrawals: [], commissions: [] };
+interface StoredState {
+  users: User[];
+  investments: Investment[];
+  deposits: Deposit[];
+  withdrawals: Withdrawal[];
+  commissions: Commission[];
+  profitHistory: ProfitEntry[];
 }
 
-function saveState(data: ReturnType<typeof loadState>) {
+function loadState(): StoredState {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      return { ...parsed, profitHistory: parsed.profitHistory || [] };
+    }
+  } catch {}
+  return { users: [], investments: [], deposits: [], withdrawals: [], commissions: [], profitHistory: [] };
+}
+
+function saveState(data: StoredState) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
@@ -67,14 +81,79 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       deposits: stored.deposits,
       withdrawals: stored.withdrawals,
       commissions: stored.commissions,
+      profitHistory: stored.profitHistory,
       allUsers: stored.users,
     };
   });
 
-  const persist = useCallback((users: User[], investments: Investment[], deposits: Deposit[], withdrawals: Withdrawal[], commissions: Commission[]) => {
-    saveState({ users, investments, deposits, withdrawals, commissions });
+  const persist = useCallback((users: User[], investments: Investment[], deposits: Deposit[], withdrawals: Withdrawal[], commissions: Commission[], profitHistory: ProfitEntry[]) => {
+    saveState({ users, investments, deposits, withdrawals, commissions, profitHistory });
   }, []);
 
+  // 30-second yield generation
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setState(prev => {
+        if (!prev.user) return prev;
+        const now = Date.now();
+        const activeInvs = prev.investments.filter(i => i.userId === prev.user!.id && i.status === 'active');
+        if (activeInvs.length === 0) return prev;
+
+        let totalNet = 0;
+        let totalFee = 0;
+        const newProfitEntries: ProfitEntry[] = [];
+
+        for (const inv of activeInvs) {
+          // Total profit for full cycle
+          const totalProfit = inv.amount * (inv.returnPercent / 100);
+          // Duration in seconds
+          const durationSeconds = inv.durationDays * 86400;
+          // Profit per 30 seconds
+          const profitPer30s = totalProfit / (durationSeconds / 30);
+          // 15% fee
+          const fee = profitPer30s * POOL_FEE;
+          const net = profitPer30s - fee;
+
+          totalNet += net;
+          totalFee += fee;
+
+          newProfitEntries.push({
+            id: generateId(),
+            userId: prev.user!.id,
+            amount: profitPer30s,
+            fee,
+            net,
+            investmentId: inv.id,
+            createdAt: now,
+          });
+        }
+
+        if (totalNet <= 0) return prev;
+
+        const updatedUser = {
+          ...prev.user!,
+          profits: prev.user!.profits + totalNet,
+          balance: prev.user!.balance + totalNet,
+        };
+        const updatedUsers = prev.allUsers.map(u => u.id === prev.user!.id ? updatedUser : u);
+        const updatedProfitHistory = [...prev.profitHistory, ...newProfitEntries];
+
+        // Check completed cycles
+        let updatedInvestments = prev.investments.map(inv => {
+          if (inv.status === 'active' && now >= inv.endDate) {
+            return { ...inv, status: 'completed' as const };
+          }
+          return inv;
+        });
+
+        persist(updatedUsers, updatedInvestments, prev.deposits, prev.withdrawals, prev.commissions, updatedProfitHistory);
+        return { ...prev, user: updatedUser, allUsers: updatedUsers, investments: updatedInvestments, profitHistory: updatedProfitHistory };
+      });
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [persist]);
+
+  // Check completed cycles every 5s
   useEffect(() => {
     const interval = setInterval(() => {
       setState(prev => {
@@ -88,7 +167,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
           return inv;
         });
         if (!changed) return prev;
-        persist(prev.allUsers, updatedInvestments, prev.deposits, prev.withdrawals, prev.commissions);
+        persist(prev.allUsers, updatedInvestments, prev.deposits, prev.withdrawals, prev.commissions, prev.profitHistory);
         return { ...prev, investments: updatedInvestments };
       });
     }, 5000);
@@ -99,7 +178,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     const stored = loadState();
     const user = stored.users.find(u => u.email === email && u.password === password);
     if (!user) return false;
-    setState(prev => ({ ...prev, user, allUsers: stored.users, investments: stored.investments, deposits: stored.deposits, withdrawals: stored.withdrawals, commissions: stored.commissions }));
+    setState(prev => ({ ...prev, user, allUsers: stored.users, investments: stored.investments, deposits: stored.deposits, withdrawals: stored.withdrawals, commissions: stored.commissions, profitHistory: stored.profitHistory }));
     localStorage.setItem('neon_current_user', user.id);
     return true;
   }, []);
@@ -122,7 +201,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     };
     stored.users.push(newUser);
     saveState(stored);
-    setState(prev => ({ ...prev, user: newUser, allUsers: stored.users, investments: stored.investments, deposits: stored.deposits, withdrawals: stored.withdrawals, commissions: stored.commissions }));
+    setState(prev => ({ ...prev, user: newUser, allUsers: stored.users, investments: stored.investments, deposits: stored.deposits, withdrawals: stored.withdrawals, commissions: stored.commissions, profitHistory: stored.profitHistory }));
     localStorage.setItem('neon_current_user', newUser.id);
     return true;
   }, []);
@@ -150,11 +229,9 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       const confirmedDep = { ...dep, status: 'confirmed' as const };
       const newDeposits = [...prev.deposits, confirmedDep];
 
-      // Credit to invested (capital investido)
       const updatedUser = { ...prev.user, balance: prev.user.balance + amount, invested: prev.user.invested + amount };
       const updatedUsers = prev.allUsers.map(u => u.id === prev.user!.id ? updatedUser : u);
 
-      // Process affiliate commissions
       let newCommissions = [...prev.commissions];
       let currentReferrerId = prev.user.referredBy;
       for (let level = 0; level < COMMISSION_LEVELS.length && currentReferrerId; level++) {
@@ -177,7 +254,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
         currentReferrerId = referrer.referredBy;
       }
 
-      persist(updatedUsers, prev.investments, newDeposits, prev.withdrawals, newCommissions);
+      persist(updatedUsers, prev.investments, newDeposits, prev.withdrawals, newCommissions, prev.profitHistory);
       return { ...prev, user: updatedUser, allUsers: updatedUsers, deposits: newDeposits, commissions: newCommissions };
     });
     return dep;
@@ -204,7 +281,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       const updatedUser = { ...prev.user, balance: prev.user.balance - amount };
       const updatedUsers = prev.allUsers.map(u => u.id === prev.user!.id ? updatedUser : u);
       const newInvestments = [...prev.investments, inv];
-      persist(updatedUsers, newInvestments, prev.deposits, prev.withdrawals, prev.commissions);
+      persist(updatedUsers, newInvestments, prev.deposits, prev.withdrawals, prev.commissions, prev.profitHistory);
       return { ...prev, user: updatedUser, allUsers: updatedUsers, investments: newInvestments };
     });
     return success;
@@ -219,7 +296,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       const updatedUser = { ...prev.user, profits: prev.user.profits - amount };
       const updatedUsers = prev.allUsers.map(u => u.id === prev.user!.id ? updatedUser : u);
       const newWithdrawals = [...prev.withdrawals, w];
-      persist(updatedUsers, prev.investments, prev.deposits, newWithdrawals, prev.commissions);
+      persist(updatedUsers, prev.investments, prev.deposits, newWithdrawals, prev.commissions, prev.profitHistory);
       return { ...prev, user: updatedUser, allUsers: updatedUsers, withdrawals: newWithdrawals };
     });
     return success;
@@ -235,7 +312,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       const updatedInvestments = prev.investments.map(i => i.id === investmentId ? { ...i, status: 'withdrawn' as const } : i);
       const updatedUser = { ...prev.user, balance: prev.user.balance + total, invested: prev.user.invested - inv.amount, profits: prev.user.profits + inv.profit };
       const updatedUsers = prev.allUsers.map(u => u.id === prev.user!.id ? updatedUser : u);
-      persist(updatedUsers, updatedInvestments, prev.deposits, prev.withdrawals, prev.commissions);
+      persist(updatedUsers, updatedInvestments, prev.deposits, prev.withdrawals, prev.commissions, prev.profitHistory);
       return { ...prev, user: updatedUser, allUsers: updatedUsers, investments: updatedInvestments };
     });
     return success;
@@ -245,7 +322,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     setState(prev => {
       const updatedUsers = prev.allUsers.map(u => u.id === userId ? { ...u, balance: u.balance + amount } : u);
       const updatedUser = prev.user && prev.user.id === userId ? { ...prev.user, balance: prev.user.balance + amount } : prev.user;
-      persist(updatedUsers, prev.investments, prev.deposits, prev.withdrawals, prev.commissions);
+      persist(updatedUsers, prev.investments, prev.deposits, prev.withdrawals, prev.commissions, prev.profitHistory);
       return { ...prev, user: updatedUser, allUsers: updatedUsers };
     });
   }, [persist]);
@@ -256,7 +333,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       const stored = loadState();
       const user = stored.users.find(u => u.id === uid);
       if (user) {
-        setState(prev => ({ ...prev, user, allUsers: stored.users, investments: stored.investments, deposits: stored.deposits, withdrawals: stored.withdrawals, commissions: stored.commissions }));
+        setState(prev => ({ ...prev, user, allUsers: stored.users, investments: stored.investments, deposits: stored.deposits, withdrawals: stored.withdrawals, commissions: stored.commissions, profitHistory: stored.profitHistory }));
       }
     }
   }, []);
