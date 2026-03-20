@@ -95,6 +95,9 @@ export default function Dashboard() {
         {/* Active cycles */}
         <ActiveCycles />
 
+        {/* Profit History */}
+        <ProfitHistory />
+
         {/* Pool VX1 */}
         <LoyaltyPool />
       </main>
