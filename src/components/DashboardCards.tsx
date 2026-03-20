@@ -70,7 +70,7 @@ export default function DashboardCards() {
         </div>
         <p
           className={`font-bold font-mono-data leading-tight text-xl ${
-            activeCycles > 0 ? 'text-neon-green text-glow-green' : 'text-muted-foreground'
+            activeCycles > 0 ? 'text-neon-green' : 'text-muted-foreground'
           }`}
         >
           {activeCycles > 0 ? 'ATIVO' : 'INATIVO'}

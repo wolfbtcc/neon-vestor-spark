@@ -45,20 +45,19 @@ export default function ProfitHistory() {
               return (
                 <div
                   key={entry.id}
-                  className="flex items-center gap-3 p-3 rounded-xl border border-border/50 bg-neon-cyan/[0.02]"
+                  className="flex items-center gap-2 p-2 rounded-lg border border-border/50 bg-neon-cyan/[0.02]"
                 >
-                  <div className="w-10 h-10 rounded-lg bg-neon-cyan/10 border border-neon-cyan/20 flex items-center justify-center flex-shrink-0"
-                    style={{ boxShadow: '0 0 12px hsl(185 100% 50% / 0.25), 0 0 24px hsl(185 100% 50% / 0.1)' }}>
-                    <Bot className="w-5 h-5 text-neon-cyan" style={{ filter: 'drop-shadow(0 0 6px hsl(185 100% 50% / 0.8)) drop-shadow(0 0 12px hsl(185 100% 50% / 0.4))' }} />
+                  <div className="w-7 h-7 rounded-md bg-neon-cyan/10 border border-neon-cyan/20 flex items-center justify-center flex-shrink-0">
+                    <Bot className="w-4 h-4 text-neon-cyan" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="font-mono-data text-neon-green font-bold text-base text-glow-green">
+                    <span className="font-mono-data text-neon-green font-semibold text-xs">
                       +{formatBRL(entry.net)}
                     </span>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-xs text-muted-foreground">{dateStr}</span>
-                      <span className="text-xs text-muted-foreground">•</span>
-                      <span className="text-xs text-muted-foreground">{timeStr}</span>
+                    <div className="flex items-center gap-1.5 mt-0.5">
+                      <span className="text-[10px] text-muted-foreground">{dateStr}</span>
+                      <span className="text-[10px] text-muted-foreground">•</span>
+                      <span className="text-[10px] text-muted-foreground">{timeStr}</span>
                     </div>
                   </div>
                 </div>
