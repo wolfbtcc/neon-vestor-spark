@@ -332,6 +332,16 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     });
   }, [persist]);
 
+  const updateUserName = useCallback((newName: string) => {
+    setState(prev => {
+      if (!prev.user) return prev;
+      const updatedUser = { ...prev.user, name: newName };
+      const updatedUsers = prev.allUsers.map(u => u.id === prev.user!.id ? updatedUser : u);
+      persist(updatedUsers, prev.investments, prev.deposits, prev.withdrawals, prev.commissions, prev.profitHistory);
+      return { ...prev, user: updatedUser, allUsers: updatedUsers };
+    });
+  }, [persist]);
+
   useEffect(() => {
     const uid = localStorage.getItem('neon_current_user');
     if (uid) {
@@ -352,7 +362,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       ...state,
       login, register, logout,
       deposit: depositFn, invest, withdraw, redeemCycle,
-      updateUserBalance, loyaltyDays,
+      updateUserBalance, updateUserName, loyaltyDays,
     }}>
       {children}
     </PlatformContext.Provider>
