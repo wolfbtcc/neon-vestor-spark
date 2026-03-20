@@ -5,6 +5,7 @@ import DashboardCards from '@/components/DashboardCards';
 import LoyaltyPool from '@/components/LoyaltyPool';
 import ActiveCycles from '@/components/ActiveCycles';
 import AffiliatePanel from '@/components/AffiliatePanel';
+import ProfitHistory from '@/components/ProfitHistory';
 import DepositModal from '@/components/DepositModal';
 import WithdrawModal from '@/components/WithdrawModal';
 import { LogOut, ArrowDownToLine, ArrowUpFromLine, Gift, ShieldAlert } from 'lucide-react';
@@ -93,6 +94,9 @@ export default function Dashboard() {
 
         {/* Active cycles */}
         <ActiveCycles />
+
+        {/* Profit History */}
+        <ProfitHistory />
 
         {/* Pool VX1 */}
         <LoyaltyPool />
