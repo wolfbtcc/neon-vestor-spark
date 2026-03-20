@@ -47,9 +47,9 @@ export default function ProfitHistory() {
                   key={entry.id}
                   className="flex items-center gap-3 p-2.5 rounded-xl border border-border/50 bg-neon-cyan/[0.02]"
                 >
-                  <div className="w-7 h-7 rounded-lg bg-neon-cyan/10 border border-neon-cyan/20 flex items-center justify-center flex-shrink-0"
-                    style={{ boxShadow: '0 0 10px hsl(185 100% 50% / 0.15)' }}>
-                    <span className="text-neon-cyan text-xs font-bold" style={{ filter: 'drop-shadow(0 0 4px hsl(185 100% 50% / 0.6))' }}>$</span>
+                  <div className="w-8 h-8 rounded-lg bg-neon-cyan/10 border border-neon-cyan/20 flex items-center justify-center flex-shrink-0"
+                    style={{ boxShadow: '0 0 12px hsl(185 100% 50% / 0.25), 0 0 24px hsl(185 100% 50% / 0.1)' }}>
+                    <Bot className="w-4.5 h-4.5 text-neon-cyan" style={{ filter: 'drop-shadow(0 0 6px hsl(185 100% 50% / 0.8)) drop-shadow(0 0 12px hsl(185 100% 50% / 0.4))' }} />
                   </div>
                   <div className="flex-1 min-w-0">
                     <span className="font-mono-data text-neon-green font-bold text-sm text-glow-green">
