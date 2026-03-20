@@ -1,5 +1,5 @@
 import { usePlatform } from '@/contexts/PlatformContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useEffect } from 'react';
 import { Zap, Globe, TrendingUp, Shield } from 'lucide-react';
 import globeBg from '@/assets/globe-bg.png';
