@@ -9,6 +9,7 @@ import Dashboard from "./pages/Dashboard";
 import AdminPage from "./pages/AdminPage";
 import ProfilePage from "./pages/ProfilePage";
 import TeamPage from "./pages/TeamPage";
+import RedeemPage from "./pages/RedeemPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/team" element={<TeamPage />} />
+            <Route path="/redeem" element={<RedeemPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </PlatformProvider>

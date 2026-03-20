@@ -12,7 +12,7 @@ import { LogOut, ArrowDownToLine, ArrowUpFromLine, Gift, ShieldAlert, Menu, X, U
 import { toast } from 'sonner';
 
 export default function Dashboard() {
-  const { user, logout, investments, redeemCycle } = usePlatform();
+  const { user, logout } = usePlatform();
   const navigate = useNavigate();
   const [depositOpen, setDepositOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
@@ -23,15 +23,8 @@ export default function Dashboard() {
     return null;
   }
 
-  const completedCycles = investments.filter(i => i.userId === user.id && i.status === 'completed');
-
   const handleRedeem = () => {
-    if (completedCycles.length === 0) {
-      toast.error('Nenhum ciclo completo para resgatar.');
-      return;
-    }
-    completedCycles.forEach(c => redeemCycle(c.id));
-    toast.success(`${completedCycles.length} ciclo(s) resgatado(s)!`);
+    navigate('/redeem');
   };
 
   return (

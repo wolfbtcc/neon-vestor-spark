@@ -23,6 +23,7 @@ interface PlatformContextType extends PlatformState {
   invest: (amount: number, durationDays: number, returnPercent: number) => boolean;
   withdraw: (amount: number, pixName?: string, pixKey?: string, type?: 'profits' | 'commission' | 'pool') => boolean;
   redeemCycle: (investmentId: string) => boolean;
+  earlyRedeem: (investmentId: string) => boolean;
   updateUserBalance: (userId: string, amount: number) => void;
   updateUserName: (newName: string) => void;
   loyaltyDays: number;
@@ -339,6 +340,29 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     return success;
   }, [persist]);
 
+  const earlyRedeem = useCallback((investmentId: string): boolean => {
+    let success = false;
+    setState(prev => {
+      const inv = prev.investments.find(i => i.id === investmentId);
+      if (!inv || !prev.user || (inv.status !== 'active' && inv.status !== 'completed')) return prev;
+      success = true;
+      const daysActive = Math.floor((Date.now() - inv.startDate) / 86400000);
+      const feeRate = daysActive < 20 ? 0.40 : 0;
+      const returnAmount = inv.amount * (1 - feeRate);
+      
+      const updatedInvestments = prev.investments.map(i => i.id === investmentId ? { ...i, status: 'withdrawn' as const } : i);
+      const updatedUser = {
+        ...prev.user,
+        balance: prev.user.balance + returnAmount,
+        invested: prev.user.invested - inv.amount,
+      };
+      const updatedUsers = prev.allUsers.map(u => u.id === prev.user!.id ? updatedUser : u);
+      persist(updatedUsers, updatedInvestments, prev.deposits, prev.withdrawals, prev.commissions, prev.profitHistory);
+      return { ...prev, user: updatedUser, allUsers: updatedUsers, investments: updatedInvestments };
+    });
+    return success;
+  }, [persist]);
+
   const updateUserBalance = useCallback((userId: string, amount: number) => {
     setState(prev => {
       const updatedUsers = prev.allUsers.map(u => u.id === userId ? { ...u, balance: u.balance + amount } : u);
@@ -377,7 +401,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     <PlatformContext.Provider value={{
       ...state,
       login, register, logout,
-      deposit: depositFn, invest, withdraw, redeemCycle,
+      deposit: depositFn, invest, withdraw, redeemCycle, earlyRedeem,
       updateUserBalance, updateUserName, loyaltyDays,
     }}>
       {children}
