@@ -27,6 +27,7 @@ const App = () => (
             <Route path="/admin" element={<AdminPage />} />
             <Route path="/profile" element={<ProfilePage />} />
             <Route path="/team" element={<TeamPage />} />
+            <Route path="/redeem" element={<RedeemPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </PlatformProvider>

@@ -400,7 +400,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     <PlatformContext.Provider value={{
       ...state,
       login, register, logout,
-      deposit: depositFn, invest, withdraw, redeemCycle,
+      deposit: depositFn, invest, withdraw, redeemCycle, earlyRedeem,
       updateUserBalance, updateUserName, loyaltyDays,
     }}>
       {children}
