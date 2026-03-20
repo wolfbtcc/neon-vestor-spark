@@ -48,26 +48,24 @@ export default function DashboardCards() {
             className={`neon-card opacity-0 animate-fade-up ${card.isMotor && card.active ? 'animate-glow-pulse' : ''}`}
             style={{ animationDelay: `${i * 80}ms`, animationFillMode: 'forwards' }}
           >
-            <div className="flex items-center justify-between mb-2">
-              <span className="text-[11px] font-semibold tracking-widest text-muted-foreground uppercase">
+            <div className="flex items-center justify-between mb-1">
+              <span className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
                 {card.label}
               </span>
               <Icon className={`w-4 h-4 ${card.isMotor && card.active ? 'text-neon-green animate-pulse-glow' : 'text-neon-cyan'} opacity-70`} />
             </div>
             <p
-              className={`text-2xl font-bold font-mono-data ${
+              className={`font-bold font-mono-data leading-tight truncate ${
                 card.isMotor
                   ? card.active
-                    ? 'text-neon-green text-glow-green'
-                    : 'text-muted-foreground'
-                  : card.highlight
-                    ? 'text-neon-cyan text-glow-cyan animate-pulse-neon'
-                    : 'text-neon-cyan text-glow-cyan'
-              }`}
+                    ? 'text-neon-green text-glow-green text-xl'
+                    : 'text-muted-foreground text-xl'
+                  : 'text-neon-cyan text-glow-cyan text-lg sm:text-xl'
+              } ${card.highlight ? 'animate-pulse-neon' : ''}`}
             >
               {card.value}
             </p>
-            <p className="text-[11px] text-muted-foreground mt-1">{card.sub}</p>
+            <p className="text-[10px] text-muted-foreground mt-0.5">{card.sub}</p>
           </div>
         );
       })}
