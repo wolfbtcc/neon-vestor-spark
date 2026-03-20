@@ -1,6 +1,6 @@
 import { usePlatform } from '@/contexts/PlatformContext';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, Users, Copy, Link, TrendingUp, DollarSign, Wallet } from 'lucide-react';
+import { ArrowLeft, Users, Copy, Link, TrendingUp, DollarSign, Wallet, ChevronDown, ChevronUp } from 'lucide-react';
 import { formatBRL, COMMISSION_LEVELS } from '@/lib/platform';
 import { toast } from 'sonner';
 import { useState } from 'react';
