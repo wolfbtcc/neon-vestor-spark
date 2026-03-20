@@ -8,7 +8,7 @@ import AffiliatePanel from '@/components/AffiliatePanel';
 import ProfitHistory from '@/components/ProfitHistory';
 import DepositModal from '@/components/DepositModal';
 import WithdrawModal from '@/components/WithdrawModal';
-import { LogOut, ArrowDownToLine, ArrowUpFromLine, Gift, ShieldAlert, Menu, X, User, Users, History } from 'lucide-react';
+import { LogOut, ArrowDownToLine, ArrowUpFromLine, Gift, ShieldAlert, Menu, X, User, Users, History, RefreshCw } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Dashboard() {
@@ -76,6 +76,13 @@ export default function Dashboard() {
                     >
                       <History className="w-4 h-4 text-neon-cyan" />
                       <span className="text-sm text-foreground">Histórico de Saques</span>
+                    </button>
+                    <button
+                      onClick={() => { setMenuOpen(false); navigate('/cycles'); }}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors text-left"
+                    >
+                      <RefreshCw className="w-4 h-4 text-neon-cyan" />
+                      <span className="text-sm text-foreground">Ciclos</span>
                     </button>
                     <div className="border-t border-border" />
                     <button
