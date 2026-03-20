@@ -9,7 +9,7 @@ interface DepositModalProps {
   onClose: () => void;
 }
 
-const PRESET_AMOUNTS = [30, 50, 100, 200, 300, 500, 1000, 3000, 5000, 10000, 15000, 20000, 50000, 100000];
+const PRESET_AMOUNTS = [5, 10, 20, 35, 50, 90, 175, 525, 875, 1750, 2625, 3500, 8750, 17500];
 const USDT_WALLET = '0xA1b2C3d4E5f6789012345678AbCdEf9876543210';
 
 export default function DepositModal({ open, onClose }: DepositModalProps) {
