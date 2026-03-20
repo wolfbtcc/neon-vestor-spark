@@ -136,7 +136,7 @@ export default function Index() {
             Entrar
           </button>
           <button
-            onClick={() => navigate('/auth?mode=register')}
+            onClick={() => goAuth('register')}
             className="px-6 py-3 rounded-lg border border-primary/40 text-primary font-semibold text-sm hover:bg-primary/10 transition-all active:scale-[0.97]"
           >
             Cadastre-se
