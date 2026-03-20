@@ -57,34 +57,37 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
   const poolFee = poolEarnings * POOL_FEE;
   const poolNet = poolEarnings - poolFee;
 
-  const handleWithdrawProfits = () => {
+  const handleWithdrawProfits = async () => {
     if (!pixName.trim()) { toast.error('Informe o nome'); return; }
     if (!pixKey.trim()) { toast.error('Informe a chave PIX'); return; }
     const val = parseFloat(amount);
     if (isNaN(val) || val <= 0) { toast.error('Valor inválido'); return; }
     if (val < 100) { toast.error('Valor mínimo para saque: R$ 100,00'); return; }
     if (val > user.profits) { toast.error('Saldo de lucros insuficiente'); return; }
-    if (withdraw(val, pixName, pixKey, 'profits')) {
+    const success = await withdraw(val, pixName, pixKey, 'profits');
+    if (success) {
       toast.success('Saque solicitado com sucesso!');
       setAmount(''); setPixName(''); setPixKey('');
       setMode('choose');
     }
   };
 
-  const handlePoolWithdraw = () => {
+  const handlePoolWithdraw = async () => {
     if (!poolStatus.available) return;
     if (poolNet <= 0) { toast.error('Sem rendimentos disponíveis no Pool.'); return; }
-    if (withdraw(poolEarnings, '', '', 'pool')) {
+    const success = await withdraw(poolEarnings, '', '', 'pool');
+    if (success) {
       toast.success('Saque Pool VX1 solicitado!');
       setMode('choose');
       onClose();
     }
   };
 
-  const handlePoolReinvest = () => {
+  const handlePoolReinvest = async () => {
     if (!poolStatus.available) return;
     if (poolNet <= 0) { toast.error('Sem rendimentos disponíveis no Pool.'); return; }
-    if (invest(poolNet, 30, 200)) {
+    const success = await invest(poolNet, 30, 200);
+    if (success) {
       toast.success(`Reinvestido: ${formatBRL(poolNet)} no ciclo 30 dias`);
       setMode('choose');
       onClose();

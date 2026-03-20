@@ -45,14 +45,14 @@ export default function RedeemPage() {
     setPixKey('');
   };
 
-  const handleConfirmRedeem = () => {
+  const handleConfirmRedeem = async () => {
     if (!selected || !method) return;
     if (method === 'pix' && (!pixName.trim() || !pixKey.trim())) {
       toast.error('Preencha Nome e Chave PIX.');
       return;
     }
     setConfirming(true);
-    const success = earlyRedeem(selected.id, pixName, pixKey);
+    const success = await earlyRedeem(selected.id, pixName, pixKey);
     if (success) {
       toast.success('Resgate solicitado! Aguarde 24h para confirmação.');
       setSelectedId(null);

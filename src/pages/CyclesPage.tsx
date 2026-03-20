@@ -15,9 +15,9 @@ export default function CyclesPage() {
   const availableBalance = user.balance;
   const hasBalance = availableBalance > 0;
 
-  const handleSelectCycle = (cycle: typeof CYCLES[0]) => {
+  const handleSelectCycle = async (cycle: typeof CYCLES[0]) => {
     if (!hasBalance) return;
-    const success = invest(availableBalance, cycle.days, cycle.returnPercent);
+    const success = await invest(availableBalance, cycle.days, cycle.returnPercent);
     if (success) {
       toast.success(`Investido ${formatBRL(availableBalance)} no ${cycle.name} (${cycle.returnPercent}% em ${cycle.label})`);
       navigate('/dashboard');

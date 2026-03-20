@@ -29,15 +29,16 @@ const storyData = [
 ];
 
 export default function Index() {
-  const { user } = usePlatform();
+  const { user, loading } = usePlatform();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const refCode = searchParams.get('ref') || '';
 
   useEffect(() => {
+    if (loading) return;
     if (user) { navigate('/dashboard'); return; }
     if (refCode) { navigate(`/auth?mode=register&ref=${refCode}`); return; }
-  }, [user, navigate, refCode]);
+  }, [user, navigate, refCode, loading]);
 
   const goAuth = (mode: string) => {
     const params = new URLSearchParams({ mode });

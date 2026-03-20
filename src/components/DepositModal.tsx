@@ -66,16 +66,16 @@ export default function DepositModal({ open, onClose }: DepositModalProps) {
     setStep('processing');
     toast.info('Depósito confirmado, aguarde processamento...');
 
-    setTimeout(() => {
-      deposit(selectedAmount, method);
+    setTimeout(async () => {
+      await deposit(selectedAmount, method);
       toast.success(`Depósito de ${formatBRL(selectedAmount)} creditado!`);
       setStep('cycle');
     }, 5000);
   };
 
-  const handleSelectCycle = (cycle: typeof CYCLES[0]) => {
+  const handleSelectCycle = async (cycle: typeof CYCLES[0]) => {
     if (!selectedAmount) return;
-    const success = invest(selectedAmount, cycle.days, cycle.returnPercent);
+    const success = await invest(selectedAmount, cycle.days, cycle.returnPercent);
     if (success) {
       toast.success(`Investido ${formatBRL(selectedAmount)} no ${cycle.name} (${cycle.returnPercent}% em ${cycle.label})`);
       reset();

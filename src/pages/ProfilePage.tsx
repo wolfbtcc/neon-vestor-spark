@@ -19,9 +19,9 @@ export default function ProfilePage() {
 
   if (!user) { navigate('/'); return null; }
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!newName.trim()) { toast.error('Nome não pode ser vazio'); return; }
-    updateUserName(newName.trim());
+    await updateUserName(newName.trim());
     setEditing(false);
     toast.success('Nome atualizado!');
   };

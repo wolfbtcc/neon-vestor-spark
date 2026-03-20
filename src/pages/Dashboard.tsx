@@ -12,11 +12,13 @@ import { LogOut, ArrowDownToLine, ArrowUpFromLine, Gift, ShieldAlert, Menu, X, U
 import { toast } from 'sonner';
 
 export default function Dashboard() {
-  const { user, logout } = usePlatform();
+  const { user, logout, loading } = usePlatform();
   const navigate = useNavigate();
   const [depositOpen, setDepositOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+
+  if (loading) return <div className="min-h-screen flex items-center justify-center"><div className="w-8 h-8 border-2 border-neon-cyan/50 border-t-neon-cyan rounded-full animate-spin" /></div>;
 
   if (!user) {
     navigate('/');
