@@ -1,16 +1,236 @@
-// Update this page (the content is just a fallback if you fail to update the page)
+import { useState, useRef } from 'react';
+import { usePlatform } from '@/contexts/PlatformContext';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { toast } from 'sonner';
+import { Eye, EyeOff, Zap, Globe, TrendingUp, Shield } from 'lucide-react';
+import globeBg from '@/assets/globe-bg.png';
 
-// IMPORTANT: Fully REPLACE this with your own code
-const PlaceholderIndex = () => {
-  // PLACEHOLDER: Replace this entire return statement with the user's app.
-  // The inline background color is intentionally not part of the design system.
+const storyData = [
+  {
+    icon: Globe,
+    title: 'O Ponto de Ruptura em Singapura',
+    text: 'Tudo começou nos servidores de alta vizinhança do centro financeiro de Singapura. Um grupo de engenheiros de sistemas, ex-colaboradores de grandes bolsas de valores, percebeu que o sistema financeiro tradicional era "lento". Enquanto o mundo esperava 24 horas para ver lucros, os grandes bancos ganhavam milhões em milissegundos através de micro-oscilações de câmbio e liquidez.',
+  },
+  {
+    icon: Zap,
+    title: 'O Nascimento do VX1',
+    subtitle: 'O "Motor de Fluxo"',
+    text: 'Eles decidiram que não precisavam mais de bancos. Eles criaram o VX1, um algoritmo de Alta Frequência (HFT) projetado para não dormir. O VX1 não espera o dia acabar para calcular o lucro; ele varre o mercado global em busca de frações de centavos a cada batida de coração. Ele foi apelidado de VORTEX porque ele cria um redemoinho de dados que atrai pequenas margens de lucro de milhares de transações que acontecem ao redor do mundo a cada instante.',
+  },
+  {
+    icon: TrendingUp,
+    title: 'A Revolução dos 30 Segundos',
+    text: 'A grande inovação do VORTEX foi a quebra da barreira do tempo. Enquanto outras plataformas "travam" o seu dinheiro por dias, o VX1 processa as operações em tempo real. A cada 30 segundos, o VX1 finaliza uma micro-operação global e injeta o lucro diretamente na sua conta. Você não precisa esperar o meio-dia; você vê a sua evolução financeira acontecer ao vivo, segundo a segundo, na palma da sua mão.',
+  },
+  {
+    icon: Shield,
+    title: 'O Poder da Escala Global',
+    text: 'O VORTEX VX1 conecta o capital de investidores comuns em um único "super-fluxo". Ao colocar apenas $5, o seu saldo se junta ao poder computacional do VX1 para capturar oportunidades que seriam impossíveis sozinho. É a tecnologia de elite, finalmente acessível, entregando resultados na velocidade da internet moderna.',
+  },
+];
+
+export default function Index() {
+  const [isLogin, setIsLogin] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPw, setShowPw] = useState(false);
+  const { login, register } = usePlatform();
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const refCode = searchParams.get('ref') || '';
+  const formRef = useRef<HTMLDivElement>(null);
+
+  const scrollToForm = (loginMode: boolean) => {
+    setIsLogin(loginMode);
+    setShowForm(true);
+    setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!email.trim() || !password.trim()) { toast.error('Preencha todos os campos'); return; }
+    if (password.length < 6) { toast.error('Senha deve ter no mínimo 6 caracteres'); return; }
+    if (isLogin) {
+      if (login(email, password)) {
+        toast.success('Login realizado!');
+        navigate('/dashboard');
+      } else {
+        toast.error('Credenciais inválidas');
+      }
+    } else {
+      if (!name.trim()) { toast.error('Preencha o nome'); return; }
+      if (register(name, email, password, refCode)) {
+        toast.success('Conta criada com sucesso!');
+        navigate('/dashboard');
+      } else {
+        toast.error('Email já cadastrado');
+      }
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center" style={{ backgroundColor: '#fcfbf8' }}>
-      <img data-lovable-blank-page-placeholder="REMOVE_THIS" src="/placeholder.svg" alt="Your app will live here!" />
+    <div className="min-h-screen relative overflow-x-hidden">
+      {/* Globe background */}
+      <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-0">
+        <img
+          src={globeBg}
+          alt=""
+          className="w-[80vw] max-w-[700px] opacity-[0.07] animate-[spin_120s_linear_infinite]"
+        />
+      </div>
+
+      {/* Ambient glow orbs */}
+      <div className="fixed top-[10%] left-[5%] w-48 h-48 rounded-full opacity-15 blur-[80px] pointer-events-none" style={{ background: 'hsl(var(--neon-green))' }} />
+      <div className="fixed bottom-[15%] right-[8%] w-56 h-56 rounded-full opacity-10 blur-[90px] pointer-events-none" style={{ background: 'hsl(var(--neon-blue))' }} />
+      <div className="fixed top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full opacity-[0.06] blur-[100px] pointer-events-none" style={{ background: 'hsl(var(--neon-green))' }} />
+
+      {/* Hero */}
+      <section className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 py-16 text-center">
+        <div className="animate-fade-up" style={{ animationDelay: '0ms' }}>
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/30 bg-primary/5 text-primary text-xs font-medium mb-6 tracking-wide">
+            <Zap className="w-3.5 h-3.5" />
+            ALGORITMO HFT DE ALTA FREQUÊNCIA
+          </div>
+        </div>
+
+        <h1 className="text-5xl sm:text-7xl font-black gradient-text-neon mb-4 animate-fade-up" style={{ lineHeight: '1.05', animationDelay: '80ms' }}>
+          VORTEX
+        </h1>
+        <p className="text-lg sm:text-xl text-muted-foreground max-w-md mb-3 animate-fade-up" style={{ animationDelay: '160ms' }}>
+          A origem do <span className="text-neon-green font-semibold text-glow-green">VX1</span>
+        </p>
+        <p className="text-sm text-muted-foreground/70 max-w-sm mb-10 animate-fade-up" style={{ animationDelay: '240ms', textWrap: 'balance' }}>
+          Tecnologia de elite acessível. Resultados na velocidade da internet moderna.
+        </p>
+
+        <div className="flex gap-3 animate-fade-up" style={{ animationDelay: '320ms' }}>
+          <button
+            onClick={() => scrollToForm(true)}
+            className="px-6 py-3 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:brightness-110 transition-all active:scale-[0.97] glow-green"
+          >
+            Entrar
+          </button>
+          <button
+            onClick={() => scrollToForm(false)}
+            className="px-6 py-3 rounded-lg border border-primary/40 text-primary font-semibold text-sm hover:bg-primary/10 transition-all active:scale-[0.97]"
+          >
+            Cadastre-se
+          </button>
+        </div>
+      </section>
+
+      {/* Story */}
+      <section className="relative z-10 max-w-2xl mx-auto px-4 pb-16 space-y-8">
+        <h2 className="text-2xl sm:text-3xl font-bold text-center gradient-text-neon mb-10" style={{ lineHeight: '1.2' }}>
+          A História da VORTEX
+        </h2>
+
+        {storyData.map((item, i) => {
+          const Icon = item.icon;
+          return (
+            <div
+              key={i}
+              className="neon-card glow-border-green opacity-0 animate-fade-up"
+              style={{ animationDelay: `${i * 120}ms`, animationFillMode: 'forwards' }}
+            >
+              <div className="flex items-start gap-4">
+                <div className="flex-shrink-0 w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
+                  <Icon className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-foreground mb-1">{item.title}</h3>
+                  {item.subtitle && (
+                    <p className="text-xs text-neon-blue font-medium mb-2">{item.subtitle}</p>
+                  )}
+                  <p className="text-sm text-muted-foreground leading-relaxed">{item.text}</p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </section>
+
+      {/* Auth Form */}
+      <section ref={formRef} className="relative z-10 max-w-sm mx-auto px-4 pb-24">
+        {showForm ? (
+          <div className="animate-fade-up">
+            <form onSubmit={handleSubmit} className="neon-card glow-border-green space-y-4">
+              <h2 className="text-lg font-semibold">{isLogin ? 'Entrar' : 'Criar conta'}</h2>
+
+              {!isLogin && (
+                <input
+                  type="text"
+                  placeholder="Nome completo"
+                  value={name}
+                  onChange={e => setName(e.target.value)}
+                  className="w-full px-4 py-3 rounded-lg bg-muted border border-border focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all text-sm"
+                />
+              )}
+              <input
+                type="email"
+                placeholder="Email"
+                value={email}
+                onChange={e => setEmail(e.target.value)}
+                className="w-full px-4 py-3 rounded-lg bg-muted border border-border focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all text-sm"
+              />
+              <div className="relative">
+                <input
+                  type={showPw ? 'text' : 'password'}
+                  placeholder="Senha"
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  className="w-full px-4 py-3 pr-10 rounded-lg bg-muted border border-border focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all text-sm"
+                />
+                <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
+                  {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+
+              {!isLogin && refCode && (
+                <div className="text-xs text-primary bg-primary/10 rounded-lg px-3 py-2">
+                  Código de referência: <span className="font-mono-data">{refCode}</span>
+                </div>
+              )}
+
+              <button type="submit" className="w-full py-3 rounded-lg bg-primary text-primary-foreground font-semibold hover:brightness-110 transition-all active:scale-[0.97] glow-green">
+                {isLogin ? 'Entrar' : 'Criar conta'}
+              </button>
+
+              <p className="text-center text-sm text-muted-foreground">
+                {isLogin ? 'Não tem conta?' : 'Já tem conta?'}{' '}
+                <button type="button" onClick={() => setIsLogin(!isLogin)} className="text-primary hover:underline">
+                  {isLogin ? 'Cadastre-se' : 'Faça login'}
+                </button>
+              </p>
+            </form>
+          </div>
+        ) : (
+          <div className="text-center space-y-4 animate-fade-up">
+            <p className="text-muted-foreground text-sm">Pronto para começar?</p>
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => scrollToForm(true)}
+                className="px-6 py-3 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:brightness-110 transition-all active:scale-[0.97] glow-green"
+              >
+                Entrar
+              </button>
+              <button
+                onClick={() => scrollToForm(false)}
+                className="px-6 py-3 rounded-lg border border-primary/40 text-primary font-semibold text-sm hover:bg-primary/10 transition-all active:scale-[0.97]"
+              >
+                Cadastre-se
+              </button>
+            </div>
+          </div>
+        )}
+      </section>
+
+      {/* Footer */}
+      <footer className="relative z-10 border-t border-border/30 py-6 text-center">
+        <p className="text-xs text-muted-foreground/50">© 2026 VORTEX — Tecnologia VX1</p>
+      </footer>
     </div>
   );
-};
-
-const Index = PlaceholderIndex;
-
-export default Index;
+}

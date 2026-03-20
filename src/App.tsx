@@ -3,6 +3,7 @@ import { BrowserRouter, Route, Routes } from "react-router-dom";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { PlatformProvider } from "@/contexts/PlatformContext";
+import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import Dashboard from "./pages/Dashboard";
 import AdminPage from "./pages/AdminPage";
@@ -17,7 +18,8 @@ const App = () => (
       <BrowserRouter>
         <PlatformProvider>
           <Routes>
-            <Route path="/" element={<AuthPage />} />
+            <Route path="/" element={<Index />} />
+            <Route path="/auth" element={<AuthPage />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/admin" element={<AdminPage />} />
             <Route path="*" element={<NotFound />} />
