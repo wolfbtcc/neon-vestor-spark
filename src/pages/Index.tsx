@@ -35,8 +35,9 @@ export default function Index() {
   const refCode = searchParams.get('ref') || '';
 
   useEffect(() => {
-    if (user) navigate('/dashboard');
-  }, [user, navigate]);
+    if (user) { navigate('/dashboard'); return; }
+    if (refCode) { navigate(`/auth?mode=register&ref=${refCode}`); return; }
+  }, [user, navigate, refCode]);
 
   const goAuth = (mode: string) => {
     const params = new URLSearchParams({ mode });
