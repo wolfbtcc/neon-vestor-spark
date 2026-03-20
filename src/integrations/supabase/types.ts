@@ -14,13 +14,258 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      commissions: {
+        Row: {
+          amount: number
+          created_at: string
+          from_user_id: string
+          from_user_name: string
+          id: string
+          level: number
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          from_user_id: string
+          from_user_name?: string
+          id?: string
+          level: number
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          from_user_id?: string
+          from_user_name?: string
+          id?: string
+          level?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      deposits: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          method: string
+          pix_code: string | null
+          status: string
+          user_id: string
+          wallet_address: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          method: string
+          pix_code?: string | null
+          status?: string
+          user_id: string
+          wallet_address?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          method?: string
+          pix_code?: string | null
+          status?: string
+          user_id?: string
+          wallet_address?: string | null
+        }
+        Relationships: []
+      }
+      investments: {
+        Row: {
+          amount: number
+          created_at: string
+          cycle_number: number
+          duration_days: number
+          end_date: string
+          id: string
+          profit: number
+          return_percent: number
+          start_date: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          cycle_number?: number
+          duration_days: number
+          end_date: string
+          id?: string
+          profit?: number
+          return_percent: number
+          start_date?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          cycle_number?: number
+          duration_days?: number
+          end_date?: string
+          id?: string
+          profit?: number
+          return_percent?: number
+          start_date?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          balance: number
+          created_at: string
+          email: string
+          id: string
+          invested: number
+          is_admin: boolean
+          name: string
+          phone: string
+          phone_country: string
+          profits: number
+          referral_code: string
+          referred_by: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          email?: string
+          id?: string
+          invested?: number
+          is_admin?: boolean
+          name?: string
+          phone?: string
+          phone_country?: string
+          profits?: number
+          referral_code: string
+          referred_by?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          email?: string
+          id?: string
+          invested?: number
+          is_admin?: boolean
+          name?: string
+          phone?: string
+          phone_country?: string
+          profits?: number
+          referral_code?: string
+          referred_by?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profit_history: {
+        Row: {
+          amount: number
+          created_at: string
+          fee: number
+          id: string
+          investment_id: string | null
+          net: number
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          fee?: number
+          id?: string
+          investment_id?: string | null
+          net?: number
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          fee?: number
+          id?: string
+          investment_id?: string | null
+          net?: number
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profit_history_investment_id_fkey"
+            columns: ["investment_id"]
+            isOneToOne: false
+            referencedRelation: "investments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      withdrawals: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          pix_key: string
+          pix_name: string
+          status: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          pix_key?: string
+          pix_name?: string
+          status?: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          pix_key?: string
+          pix_name?: string
+          status?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      auto_confirm_withdrawals: { Args: never; Returns: undefined }
+      process_deposit: {
+        Args: {
+          p_amount: number
+          p_method: string
+          p_pix_code?: string
+          p_user_id: string
+          p_wallet_address?: string
+        }
+        Returns: string
+      }
+      process_early_redeem: {
+        Args: {
+          p_investment_id: string
+          p_pix_key?: string
+          p_pix_name?: string
+          p_user_id: string
+        }
+        Returns: string
+      }
     }
     Enums: {
       [_ in never]: never
