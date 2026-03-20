@@ -8,7 +8,7 @@ import AffiliatePanel from '@/components/AffiliatePanel';
 import ProfitHistory from '@/components/ProfitHistory';
 import DepositModal from '@/components/DepositModal';
 import WithdrawModal from '@/components/WithdrawModal';
-import { LogOut, ArrowDownToLine, ArrowUpFromLine, Gift, ShieldAlert, Menu, X, User, Users } from 'lucide-react';
+import { LogOut, ArrowDownToLine, ArrowUpFromLine, Gift, ShieldAlert, Menu, X, User, Users, History } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Dashboard() {
