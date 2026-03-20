@@ -25,6 +25,8 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  phone: string;
+  phoneCountry: string;
   password: string;
   balance: number;
   invested: number;

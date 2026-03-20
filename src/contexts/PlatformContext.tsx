@@ -17,13 +17,14 @@ interface PlatformState {
 
 interface PlatformContextType extends PlatformState {
   login: (email: string, password: string) => boolean;
-  register: (name: string, email: string, password: string, referralCode?: string) => boolean;
+  register: (name: string, email: string, password: string, referralCode?: string, phone?: string, phoneCountry?: string) => boolean;
   logout: () => void;
   deposit: (amount: number, method: 'pix' | 'usdt') => Deposit;
   invest: (amount: number, durationDays: number, returnPercent: number) => boolean;
   withdraw: (amount: number) => boolean;
   redeemCycle: (investmentId: string) => boolean;
   updateUserBalance: (userId: string, amount: number) => void;
+  updateUserName: (newName: string) => void;
   loyaltyDays: number;
 }
 
@@ -64,6 +65,8 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
         id: 'admin001',
         name: 'Admin',
         email: 'admin@platform.com',
+        phone: '',
+        phoneCountry: 'BR',
         password: 'admin123',
         balance: 0,
         invested: 0,
@@ -183,7 +186,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     return true;
   }, []);
 
-  const register = useCallback((name: string, email: string, password: string, referralCode?: string): boolean => {
+  const register = useCallback((name: string, email: string, password: string, referralCode?: string, phone?: string, phoneCountry?: string): boolean => {
     const stored = loadState();
     if (stored.users.some(u => u.email === email)) return false;
     const referrer = referralCode ? stored.users.find(u => u.referralCode === referralCode) : null;
@@ -191,6 +194,8 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       id: generateId(),
       name,
       email,
+      phone: phone || '',
+      phoneCountry: phoneCountry || 'BR',
       password,
       balance: 0,
       invested: 0,
@@ -327,6 +332,16 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     });
   }, [persist]);
 
+  const updateUserName = useCallback((newName: string) => {
+    setState(prev => {
+      if (!prev.user) return prev;
+      const updatedUser = { ...prev.user, name: newName };
+      const updatedUsers = prev.allUsers.map(u => u.id === prev.user!.id ? updatedUser : u);
+      persist(updatedUsers, prev.investments, prev.deposits, prev.withdrawals, prev.commissions, prev.profitHistory);
+      return { ...prev, user: updatedUser, allUsers: updatedUsers };
+    });
+  }, [persist]);
+
   useEffect(() => {
     const uid = localStorage.getItem('neon_current_user');
     if (uid) {
@@ -347,7 +362,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       ...state,
       login, register, logout,
       deposit: depositFn, invest, withdraw, redeemCycle,
-      updateUserBalance, loyaltyDays,
+      updateUserBalance, updateUserName, loyaltyDays,
     }}>
       {children}
     </PlatformContext.Provider>
