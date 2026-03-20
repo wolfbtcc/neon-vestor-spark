@@ -75,7 +75,15 @@ export default function DepositModal({ open, onClose }: DepositModalProps) {
   };
 
   const handlePixDeposit = () => {
-    if (!selectedAmount) return;
+    if (!selectedAmount || !receipt || !receiptHash) {
+      toast.error('Anexe o comprovante para continuar.');
+      return;
+    }
+    // Save hash
+    const usedHashes = getUsedHashes();
+    usedHashes.push(receiptHash);
+    localStorage.setItem(usedHashesKey, JSON.stringify(usedHashes));
+
     setStep('processing');
     toast.info('Depósito confirmado, aguarde processamento...');
     setTimeout(() => {
@@ -171,6 +179,30 @@ export default function DepositModal({ open, onClose }: DepositModalProps) {
               <MessageCircle className="w-4 h-4" />
               Falar com Suporte
             </a>
+
+            {/* Receipt upload for PIX */}
+            <div className="p-4 rounded-xl border border-border space-y-3">
+              <p className="text-xs font-semibold text-foreground">Anexar Comprovante</p>
+              <p className="text-[11px] text-muted-foreground">Valor: <span className="font-mono-data text-neon-cyan">{formatBRL(selectedAmount!)}</span></p>
+              <div
+                onClick={() => fileRef.current?.click()}
+                className="border-2 border-dashed border-border rounded-xl p-4 text-center cursor-pointer hover:border-neon-cyan/40 transition-colors"
+              >
+                <Upload className="w-6 h-6 mx-auto mb-1 text-muted-foreground" />
+                <p className="text-xs text-muted-foreground">
+                  {receipt ? receipt.name : 'Clique para selecionar imagem'}
+                </p>
+              </div>
+              <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+              <button
+                onClick={handlePixDeposit}
+                disabled={!receipt}
+                className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-semibold hover:brightness-110 transition-all active:scale-[0.98] glow-cyan disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Confirmar Depósito
+              </button>
+            </div>
+
             <button onClick={() => setStep('method')} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
               ← Voltar
             </button>
