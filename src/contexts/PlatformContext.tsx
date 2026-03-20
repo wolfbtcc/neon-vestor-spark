@@ -292,12 +292,16 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     return success;
   }, [persist]);
 
-  const withdraw = useCallback((amount: number): boolean => {
+  const withdraw = useCallback((amount: number, pixName?: string, pixKey?: string, type?: 'profits' | 'commission' | 'pool'): boolean => {
     let success = false;
     setState(prev => {
       if (!prev.user || prev.user.profits < amount || amount <= 0) return prev;
       success = true;
-      const w: Withdrawal = { id: generateId(), userId: prev.user.id, amount, status: 'completed', createdAt: Date.now() };
+      const w: Withdrawal = {
+        id: generateId(), userId: prev.user.id, amount,
+        pixName: pixName || '', pixKey: pixKey || '', type: type || 'profits',
+        status: 'pending', createdAt: Date.now(),
+      };
       const updatedUser = { ...prev.user, profits: prev.user.profits - amount };
       const updatedUsers = prev.allUsers.map(u => u.id === prev.user!.id ? updatedUser : u);
       const newWithdrawals = [...prev.withdrawals, w];
