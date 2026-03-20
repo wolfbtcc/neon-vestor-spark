@@ -1,5 +1,5 @@
 import { usePlatform } from '@/contexts/PlatformContext';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useEffect } from 'react';
 import { Zap, Globe, TrendingUp, Shield } from 'lucide-react';
 import globeBg from '@/assets/globe-bg.png';
@@ -31,10 +31,18 @@ const storyData = [
 export default function Index() {
   const { user } = usePlatform();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const refCode = searchParams.get('ref') || '';
 
   useEffect(() => {
     if (user) navigate('/dashboard');
   }, [user, navigate]);
+
+  const goAuth = (mode: string) => {
+    const params = new URLSearchParams({ mode });
+    if (refCode) params.set('ref', refCode);
+    navigate(`/auth?${params.toString()}`);
+  };
 
   return (
     <div className="min-h-screen relative overflow-x-hidden">
@@ -72,13 +80,13 @@ export default function Index() {
 
         <div className="flex gap-3 animate-fade-up" style={{ animationDelay: '320ms' }}>
           <button
-            onClick={() => navigate('/auth?mode=login')}
+            onClick={() => goAuth('login')}
             className="px-6 py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:brightness-110 transition-all active:scale-[0.97] glow-cyan"
           >
             Entrar
           </button>
           <button
-            onClick={() => navigate('/auth?mode=register')}
+            onClick={() => goAuth('register')}
             className="px-6 py-3 rounded-lg border border-primary/40 text-primary font-semibold text-sm hover:bg-primary/10 transition-all active:scale-[0.97]"
           >
             Cadastre-se
@@ -122,13 +130,13 @@ export default function Index() {
         <p className="text-muted-foreground text-sm">Pronto para começar?</p>
         <div className="flex gap-3 justify-center">
           <button
-            onClick={() => navigate('/auth?mode=login')}
+            onClick={() => goAuth('login')}
             className="px-6 py-3 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:brightness-110 transition-all active:scale-[0.97] glow-green"
           >
             Entrar
           </button>
           <button
-            onClick={() => navigate('/auth?mode=register')}
+            onClick={() => goAuth('register')}
             className="px-6 py-3 rounded-lg border border-primary/40 text-primary font-semibold text-sm hover:bg-primary/10 transition-all active:scale-[0.97]"
           >
             Cadastre-se
