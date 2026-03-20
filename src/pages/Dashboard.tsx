@@ -77,6 +77,13 @@ export default function Dashboard() {
                       <History className="w-4 h-4 text-neon-cyan" />
                       <span className="text-sm text-foreground">Histórico de Saques</span>
                     </button>
+                    <button
+                      onClick={() => { setMenuOpen(false); navigate('/cycles'); }}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors text-left"
+                    >
+                      <RefreshCw className="w-4 h-4 text-neon-cyan" />
+                      <span className="text-sm text-foreground">Ciclos</span>
+                    </button>
                     <div className="border-t border-border" />
                     <button
                       onClick={() => { setMenuOpen(false); logout(); navigate('/'); }}
