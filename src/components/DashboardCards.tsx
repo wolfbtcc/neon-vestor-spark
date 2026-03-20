@@ -45,22 +45,22 @@ export default function DashboardCards() {
         return (
           <div
             key={i}
-            className={`neon-card opacity-0 animate-fade-up ${card.isMotor && card.active ? 'animate-glow-pulse' : ''}`}
+            className={`neon-card overflow-hidden opacity-0 animate-fade-up ${card.isMotor && card.active ? 'animate-glow-pulse' : ''}`}
             style={{ animationDelay: `${i * 80}ms`, animationFillMode: 'forwards' }}
           >
             <div className="flex items-center justify-between mb-1">
               <span className="text-[10px] font-semibold tracking-widest text-muted-foreground uppercase">
                 {card.label}
               </span>
-              <Icon className={`w-4 h-4 ${card.isMotor && card.active ? 'text-neon-green animate-pulse-glow' : 'text-neon-cyan'} opacity-70`} />
+              <Icon className={`w-4 h-4 flex-shrink-0 ${card.isMotor && card.active ? 'text-neon-green animate-pulse-glow' : 'text-neon-cyan'} opacity-70`} />
             </div>
             <p
-              className={`font-bold font-mono-data leading-tight truncate ${
+              className={`font-bold font-mono-data leading-tight overflow-hidden text-ellipsis whitespace-nowrap ${
                 card.isMotor
                   ? card.active
-                    ? 'text-neon-green text-glow-green text-xl'
-                    : 'text-muted-foreground text-xl'
-                  : 'text-neon-cyan text-glow-cyan text-lg sm:text-xl'
+                    ? 'text-neon-green text-glow-green text-base'
+                    : 'text-muted-foreground text-base'
+                  : 'text-neon-cyan text-glow-cyan text-base'
               } ${card.highlight ? 'animate-pulse-neon' : ''}`}
             >
               {card.value}
