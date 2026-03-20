@@ -2,7 +2,7 @@ import { usePlatform } from '@/contexts/PlatformContext';
 import { formatBRL } from '@/lib/platform';
 import { toast } from 'sonner';
 
-const POOL_FEE = 0.15; // 15%
+const POOL_FEE = 0.15;
 
 export default function LoyaltyPool() {
   const { user, loyaltyDays, withdraw, invest } = usePlatform();
@@ -28,27 +28,27 @@ export default function LoyaltyPool() {
 
   return (
     <div className="neon-card">
-      <h3 className="text-lg font-semibold mb-4">Pool VX1</h3>
+      <h3 className="text-sm font-semibold tracking-widest text-muted-foreground uppercase mb-3">Pool VX1</h3>
       <div className="space-y-3">
-        <div className="flex justify-between text-sm">
+        <div className="flex justify-between text-xs">
           <span className="text-muted-foreground">Progresso de fidelidade</span>
-          <span className="font-mono-data text-neon-green">{loyaltyDays}/7 dias</span>
+          <span className="font-mono-data text-neon-cyan">{loyaltyDays}/7 dias</span>
         </div>
         <div className="w-full h-2 bg-muted rounded-full overflow-hidden">
           <div
             className="h-full rounded-full transition-all duration-700 ease-out"
             style={{
               width: `${progress}%`,
-              background: 'linear-gradient(90deg, hsl(152 70% 45%), hsl(200 80% 50%))',
-              boxShadow: '0 0 8px hsl(152 70% 45% / 0.5)',
+              background: 'linear-gradient(90deg, hsl(185 100% 50%), hsl(152 70% 45%))',
+              boxShadow: '0 0 10px hsl(185 100% 50% / 0.5)',
             }}
           />
         </div>
 
         {canAct && earnings > 0 && (
-          <div className="p-3 rounded-lg bg-neon-green/5 border border-neon-green/20 text-sm space-y-1">
-            <p>Rendimentos: <span className="font-mono-data font-bold">{formatBRL(earnings)}</span></p>
-            <p className="text-xs text-muted-foreground">Taxa de 15%: -{formatBRL(feeAmount)} → Líquido: <span className="text-neon-green font-bold">{formatBRL(netAmount)}</span></p>
+          <div className="p-3 rounded-xl bg-neon-cyan/5 border border-neon-cyan/15 text-xs space-y-1">
+            <p>Rendimentos: <span className="font-mono-data font-bold text-neon-cyan">{formatBRL(earnings)}</span></p>
+            <p className="text-muted-foreground">Taxa 15%: -{formatBRL(feeAmount)} → Líquido: <span className="text-neon-green font-bold">{formatBRL(netAmount)}</span></p>
           </div>
         )}
 
@@ -57,20 +57,20 @@ export default function LoyaltyPool() {
             <button
               onClick={handleWithdrawPool}
               disabled={netAmount <= 0}
-              className="flex-1 py-2 rounded-lg text-sm font-semibold bg-primary text-primary-foreground hover:brightness-110 transition-all active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none glow-green"
+              className="flex-1 py-2.5 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:brightness-110 transition-all active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none glow-cyan"
             >
               Sacar
             </button>
             <button
               onClick={handleReinvest}
               disabled={netAmount <= 0}
-              className="flex-1 py-2 rounded-lg text-sm font-semibold border border-primary/40 text-primary hover:bg-primary/10 transition-all active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none"
+              className="flex-1 py-2.5 rounded-xl text-xs font-semibold border border-primary/40 text-primary hover:bg-primary/10 transition-all active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none"
             >
               Reinvestir
             </button>
           </div>
         ) : (
-          <p className="text-xs text-muted-foreground">
+          <p className="text-[11px] text-muted-foreground">
             Saque/reinvestimento disponível após 7 dias. Taxa de 15% sobre rendimentos.
           </p>
         )}

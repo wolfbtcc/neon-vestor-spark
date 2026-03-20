@@ -2,50 +2,75 @@ import { formatBRL } from '@/lib/platform';
 import { usePlatform } from '@/contexts/PlatformContext';
 import { Wallet, TrendingUp, DollarSign, Zap } from 'lucide-react';
 
-const cards = [
-  { key: 'balance', label: 'Saldo disponível', icon: Wallet, getValue: (u: any) => u.profits },
-  { key: 'invested', label: 'Capital investido', icon: TrendingUp, getValue: (u: any) => u.invested },
-  { key: 'profits', label: 'Lucros', icon: DollarSign, getValue: (u: any) => u.profits > 0 ? u.profits : 0 },
-] as const;
-
 export default function DashboardCards() {
   const { user, investments } = usePlatform();
   if (!user) return null;
 
   const activeCycles = investments.filter(i => i.userId === user.id && i.status === 'active').length;
 
+  const cards = [
+    {
+      label: 'SALDO DISPONÍVEL',
+      value: formatBRL(user.balance),
+      sub: 'Pronto para sacar ou investir',
+      icon: Wallet,
+      highlight: true,
+    },
+    {
+      label: 'VALOR APLICADO',
+      value: formatBRL(user.invested),
+      sub: 'Total investido em ciclos',
+      icon: TrendingUp,
+    },
+    {
+      label: 'LUCROS',
+      value: formatBRL(user.profits),
+      sub: 'Rendimentos gerados',
+      icon: DollarSign,
+    },
+    {
+      label: 'MOTOR VX1',
+      value: activeCycles > 0 ? 'ATIVO' : 'INATIVO',
+      sub: `${activeCycles} ciclo(s) ativo(s)`,
+      icon: Zap,
+      isMotor: true,
+      active: activeCycles > 0,
+    },
+  ];
+
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-      {cards.map((card, i) => (
-        <div
-          key={card.key}
-          className="neon-card opacity-0 animate-fade-up"
-          style={{ animationDelay: `${i * 80}ms`, animationFillMode: 'forwards' }}
-        >
-          <div className="flex items-center justify-between mb-3">
-            <span className="text-xs text-muted-foreground">{card.label}</span>
-            <card.icon className="w-4 h-4 text-neon-green opacity-70" />
+    <div className="space-y-3">
+      {cards.map((card, i) => {
+        const Icon = card.icon;
+        return (
+          <div
+            key={i}
+            className={`neon-card opacity-0 animate-fade-up ${card.isMotor && card.active ? 'animate-glow-pulse' : ''}`}
+            style={{ animationDelay: `${i * 80}ms`, animationFillMode: 'forwards' }}
+          >
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-semibold tracking-widest text-muted-foreground uppercase">
+                {card.label}
+              </span>
+              <Icon className={`w-4 h-4 ${card.isMotor && card.active ? 'text-neon-green animate-pulse-glow' : 'text-neon-cyan'} opacity-70`} />
+            </div>
+            <p
+              className={`text-2xl font-bold font-mono-data ${
+                card.isMotor
+                  ? card.active
+                    ? 'text-neon-green text-glow-green'
+                    : 'text-muted-foreground'
+                  : card.highlight
+                    ? 'text-neon-cyan text-glow-cyan animate-pulse-neon'
+                    : 'text-neon-cyan text-glow-cyan'
+              }`}
+            >
+              {card.value}
+            </p>
+            <p className="text-[11px] text-muted-foreground mt-1">{card.sub}</p>
           </div>
-          <p className="text-lg sm:text-2xl font-bold font-mono-data gradient-text-neon">
-            {formatBRL(card.getValue(user))}
-          </p>
-        </div>
-      ))}
-      <div
-        className="neon-card glow-border-green opacity-0 animate-fade-up"
-        style={{ animationDelay: '240ms', animationFillMode: 'forwards' }}
-      >
-        <div className="flex items-center justify-between mb-3">
-          <span className="text-xs text-muted-foreground">Motor VX1</span>
-          <Zap className="w-4 h-4 text-neon-green animate-pulse-glow" />
-        </div>
-        <p className="text-lg sm:text-2xl font-bold font-mono-data text-neon-green text-glow-green">
-          {activeCycles}
-        </p>
-        <p className="text-xs text-muted-foreground mt-1">
-          {activeCycles === 1 ? 'ciclo ativo' : 'ciclos ativos'}
-        </p>
-      </div>
+        );
+      })}
     </div>
   );
 }
