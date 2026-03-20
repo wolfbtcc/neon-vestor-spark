@@ -12,6 +12,7 @@ export default function TeamPage() {
   const { user, allUsers, commissions, withdraw } = usePlatform();
   const navigate = useNavigate();
   const [showWithdraw, setShowWithdraw] = useState(false);
+  const [expandedLevel, setExpandedLevel] = useState<number | null>(null);
   const [pixName, setPixName] = useState('');
   const [amount, setAmount] = useState('');
 
