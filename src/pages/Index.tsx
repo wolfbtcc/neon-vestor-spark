@@ -1,8 +1,7 @@
-import { useState, useRef } from 'react';
 import { usePlatform } from '@/contexts/PlatformContext';
-import { useNavigate, useSearchParams } from 'react-router-dom';
-import { toast } from 'sonner';
-import { Eye, EyeOff, Zap, Globe, TrendingUp, Shield } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
+import { Zap, Globe, TrendingUp, Shield } from 'lucide-react';
 import globeBg from '@/assets/globe-bg.png';
 
 const storyData = [
@@ -30,45 +29,12 @@ const storyData = [
 ];
 
 export default function Index() {
-  const [isLogin, setIsLogin] = useState(true);
-  const [showForm, setShowForm] = useState(false);
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [showPw, setShowPw] = useState(false);
-  const { login, register } = usePlatform();
+  const { user } = usePlatform();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const refCode = searchParams.get('ref') || '';
-  const formRef = useRef<HTMLDivElement>(null);
 
-  const scrollToForm = (loginMode: boolean) => {
-    setIsLogin(loginMode);
-    setShowForm(true);
-    setTimeout(() => formRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
-  };
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email.trim() || !password.trim()) { toast.error('Preencha todos os campos'); return; }
-    if (password.length < 6) { toast.error('Senha deve ter no mínimo 6 caracteres'); return; }
-    if (isLogin) {
-      if (login(email, password)) {
-        toast.success('Login realizado!');
-        navigate('/dashboard');
-      } else {
-        toast.error('Credenciais inválidas');
-      }
-    } else {
-      if (!name.trim()) { toast.error('Preencha o nome'); return; }
-      if (register(name, email, password, refCode)) {
-        toast.success('Conta criada com sucesso!');
-        navigate('/dashboard');
-      } else {
-        toast.error('Email já cadastrado');
-      }
-    }
-  };
+  useEffect(() => {
+    if (user) navigate('/dashboard');
+  }, [user, navigate]);
 
   return (
     <div className="min-h-screen relative overflow-x-hidden">
@@ -84,7 +50,6 @@ export default function Index() {
       {/* Ambient glow orbs */}
       <div className="fixed top-[10%] left-[5%] w-48 h-48 rounded-full opacity-15 blur-[80px] pointer-events-none" style={{ background: 'hsl(var(--neon-green))' }} />
       <div className="fixed bottom-[15%] right-[8%] w-56 h-56 rounded-full opacity-10 blur-[90px] pointer-events-none" style={{ background: 'hsl(var(--neon-blue))' }} />
-      <div className="fixed top-[50%] left-[50%] -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full opacity-[0.06] blur-[100px] pointer-events-none" style={{ background: 'hsl(var(--neon-green))' }} />
 
       {/* Hero */}
       <section className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 py-16 text-center">
@@ -101,19 +66,19 @@ export default function Index() {
         <p className="text-lg sm:text-xl text-muted-foreground max-w-md mb-3 animate-fade-up" style={{ animationDelay: '160ms' }}>
           A origem do <span className="text-neon-green font-semibold text-glow-green">VX1</span>
         </p>
-        <p className="text-sm text-muted-foreground/70 max-w-sm mb-10 animate-fade-up" style={{ animationDelay: '240ms', textWrap: 'balance' }}>
+        <p className="text-sm text-muted-foreground/70 max-w-sm mb-10 animate-fade-up" style={{ animationDelay: '240ms', textWrap: 'balance' as any }}>
           Tecnologia de elite acessível. Resultados na velocidade da internet moderna.
         </p>
 
         <div className="flex gap-3 animate-fade-up" style={{ animationDelay: '320ms' }}>
           <button
-            onClick={() => scrollToForm(true)}
+            onClick={() => navigate('/auth?mode=login')}
             className="px-6 py-3 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:brightness-110 transition-all active:scale-[0.97] glow-green"
           >
             Entrar
           </button>
           <button
-            onClick={() => scrollToForm(false)}
+            onClick={() => navigate('/auth?mode=register')}
             className="px-6 py-3 rounded-lg border border-primary/40 text-primary font-semibold text-sm hover:bg-primary/10 transition-all active:scale-[0.97]"
           >
             Cadastre-se
@@ -152,82 +117,25 @@ export default function Index() {
         })}
       </section>
 
-      {/* Auth Form */}
-      <section ref={formRef} className="relative z-10 max-w-sm mx-auto px-4 pb-24">
-        {showForm ? (
-          <div className="animate-fade-up">
-            <form onSubmit={handleSubmit} className="neon-card glow-border-green space-y-4">
-              <h2 className="text-lg font-semibold">{isLogin ? 'Entrar' : 'Criar conta'}</h2>
-
-              {!isLogin && (
-                <input
-                  type="text"
-                  placeholder="Nome completo"
-                  value={name}
-                  onChange={e => setName(e.target.value)}
-                  className="w-full px-4 py-3 rounded-lg bg-muted border border-border focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all text-sm"
-                />
-              )}
-              <input
-                type="email"
-                placeholder="Email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                className="w-full px-4 py-3 rounded-lg bg-muted border border-border focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all text-sm"
-              />
-              <div className="relative">
-                <input
-                  type={showPw ? 'text' : 'password'}
-                  placeholder="Senha"
-                  value={password}
-                  onChange={e => setPassword(e.target.value)}
-                  className="w-full px-4 py-3 pr-10 rounded-lg bg-muted border border-border focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all text-sm"
-                />
-                <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
-                  {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-
-              {!isLogin && refCode && (
-                <div className="text-xs text-primary bg-primary/10 rounded-lg px-3 py-2">
-                  Código de referência: <span className="font-mono-data">{refCode}</span>
-                </div>
-              )}
-
-              <button type="submit" className="w-full py-3 rounded-lg bg-primary text-primary-foreground font-semibold hover:brightness-110 transition-all active:scale-[0.97] glow-green">
-                {isLogin ? 'Entrar' : 'Criar conta'}
-              </button>
-
-              <p className="text-center text-sm text-muted-foreground">
-                {isLogin ? 'Não tem conta?' : 'Já tem conta?'}{' '}
-                <button type="button" onClick={() => setIsLogin(!isLogin)} className="text-primary hover:underline">
-                  {isLogin ? 'Cadastre-se' : 'Faça login'}
-                </button>
-              </p>
-            </form>
-          </div>
-        ) : (
-          <div className="text-center space-y-4 animate-fade-up">
-            <p className="text-muted-foreground text-sm">Pronto para começar?</p>
-            <div className="flex gap-3 justify-center">
-              <button
-                onClick={() => scrollToForm(true)}
-                className="px-6 py-3 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:brightness-110 transition-all active:scale-[0.97] glow-green"
-              >
-                Entrar
-              </button>
-              <button
-                onClick={() => scrollToForm(false)}
-                className="px-6 py-3 rounded-lg border border-primary/40 text-primary font-semibold text-sm hover:bg-primary/10 transition-all active:scale-[0.97]"
-              >
-                Cadastre-se
-              </button>
-            </div>
-          </div>
-        )}
+      {/* CTA bottom */}
+      <section className="relative z-10 max-w-sm mx-auto px-4 pb-24 text-center space-y-4">
+        <p className="text-muted-foreground text-sm">Pronto para começar?</p>
+        <div className="flex gap-3 justify-center">
+          <button
+            onClick={() => navigate('/auth?mode=login')}
+            className="px-6 py-3 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:brightness-110 transition-all active:scale-[0.97] glow-green"
+          >
+            Entrar
+          </button>
+          <button
+            onClick={() => navigate('/auth?mode=register')}
+            className="px-6 py-3 rounded-lg border border-primary/40 text-primary font-semibold text-sm hover:bg-primary/10 transition-all active:scale-[0.97]"
+          >
+            Cadastre-se
+          </button>
+        </div>
       </section>
 
-      {/* Footer */}
       <footer className="relative z-10 border-t border-border/30 py-6 text-center">
         <p className="text-xs text-muted-foreground/50">© 2026 VORTEX — Tecnologia VX1</p>
       </footer>

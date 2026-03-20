@@ -1,19 +1,29 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { usePlatform } from '@/contexts/PlatformContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { toast } from 'sonner';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft } from 'lucide-react';
+import globeBg from '@/assets/globe-bg.png';
 
 export default function AuthPage() {
-  const [isLogin, setIsLogin] = useState(true);
+  const [searchParams] = useSearchParams();
+  const mode = searchParams.get('mode');
+  const refCode = searchParams.get('ref') || '';
+  const [isLogin, setIsLogin] = useState(mode !== 'register');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
-  const { login, register } = usePlatform();
+  const { login, register, user } = usePlatform();
   const navigate = useNavigate();
-  const [searchParams] = useSearchParams();
-  const refCode = searchParams.get('ref') || '';
+
+  useEffect(() => {
+    if (user) navigate('/dashboard');
+  }, [user, navigate]);
+
+  useEffect(() => {
+    setIsLogin(mode !== 'register');
+  }, [mode]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,14 +50,26 @@ export default function AuthPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
-      {/* Background effects */}
-      <div className="absolute top-1/4 -left-32 w-64 h-64 rounded-full opacity-20 blur-3xl" style={{ background: 'hsl(152 70% 45%)' }} />
-      <div className="absolute bottom-1/4 -right-32 w-64 h-64 rounded-full opacity-15 blur-3xl" style={{ background: 'hsl(200 80% 50%)' }} />
+      {/* Globe background */}
+      <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-0">
+        <img src={globeBg} alt="" className="w-[60vw] max-w-[500px] opacity-[0.05] animate-[spin_120s_linear_infinite]" />
+      </div>
 
-      <div className="w-full max-w-sm animate-fade-up">
+      <div className="absolute top-1/4 -left-32 w-64 h-64 rounded-full opacity-20 blur-3xl" style={{ background: 'hsl(var(--neon-green))' }} />
+      <div className="absolute bottom-1/4 -right-32 w-64 h-64 rounded-full opacity-15 blur-3xl" style={{ background: 'hsl(var(--neon-blue))' }} />
+
+      <div className="w-full max-w-sm animate-fade-up relative z-10">
+        <button
+          onClick={() => navigate('/')}
+          className="flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-6 active:scale-95"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Voltar
+        </button>
+
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold gradient-text-neon" style={{ lineHeight: '1.2' }}>NeonVest</h1>
-          <p className="text-muted-foreground text-sm mt-2">Plataforma de investimentos</p>
+          <h1 className="text-3xl font-bold gradient-text-neon" style={{ lineHeight: '1.2' }}>VORTEX</h1>
+          <p className="text-muted-foreground text-sm mt-2">Plataforma de investimentos VX1</p>
         </div>
 
         <form onSubmit={handleSubmit} className="neon-card glow-border-green space-y-4">
@@ -59,7 +81,7 @@ export default function AuthPage() {
               placeholder="Nome completo"
               value={name}
               onChange={e => setName(e.target.value)}
-              className="w-full px-4 py-3 rounded-lg bg-muted border border-border focus:border-neon-green/50 focus:outline-none focus:ring-1 focus:ring-neon-green/30 transition-all text-sm"
+              className="w-full px-4 py-3 rounded-lg bg-muted border border-border focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all text-sm"
             />
           )}
           <input
@@ -67,7 +89,7 @@ export default function AuthPage() {
             placeholder="Email"
             value={email}
             onChange={e => setEmail(e.target.value)}
-            className="w-full px-4 py-3 rounded-lg bg-muted border border-border focus:border-neon-green/50 focus:outline-none focus:ring-1 focus:ring-neon-green/30 transition-all text-sm"
+            className="w-full px-4 py-3 rounded-lg bg-muted border border-border focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all text-sm"
           />
           <div className="relative">
             <input
@@ -75,7 +97,7 @@ export default function AuthPage() {
               placeholder="Senha"
               value={password}
               onChange={e => setPassword(e.target.value)}
-              className="w-full px-4 py-3 pr-10 rounded-lg bg-muted border border-border focus:border-neon-green/50 focus:outline-none focus:ring-1 focus:ring-neon-green/30 transition-all text-sm"
+              className="w-full px-4 py-3 pr-10 rounded-lg bg-muted border border-border focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all text-sm"
             />
             <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors">
               {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -83,18 +105,18 @@ export default function AuthPage() {
           </div>
 
           {!isLogin && refCode && (
-            <div className="text-xs text-neon-green bg-neon-green/10 rounded-lg px-3 py-2">
+            <div className="text-xs text-primary bg-primary/10 rounded-lg px-3 py-2">
               Código de referência: <span className="font-mono-data">{refCode}</span>
             </div>
           )}
 
-          <button type="submit" className="w-full py-3 rounded-lg bg-primary text-primary-foreground font-semibold hover:brightness-110 transition-all active:scale-[0.98] glow-green">
+          <button type="submit" className="w-full py-3 rounded-lg bg-primary text-primary-foreground font-semibold hover:brightness-110 transition-all active:scale-[0.97] glow-green">
             {isLogin ? 'Entrar' : 'Criar conta'}
           </button>
 
           <p className="text-center text-sm text-muted-foreground">
             {isLogin ? 'Não tem conta?' : 'Já tem conta?'}{' '}
-            <button type="button" onClick={() => setIsLogin(!isLogin)} className="text-neon-green hover:underline">
+            <button type="button" onClick={() => setIsLogin(!isLogin)} className="text-primary hover:underline">
               {isLogin ? 'Cadastre-se' : 'Faça login'}
             </button>
           </p>

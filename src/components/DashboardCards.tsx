@@ -3,9 +3,9 @@ import { usePlatform } from '@/contexts/PlatformContext';
 import { Wallet, TrendingUp, DollarSign, Zap } from 'lucide-react';
 
 const cards = [
-  { key: 'balance', label: 'Saldo disponível', icon: Wallet, getValue: (u: any) => u.balance },
-  { key: 'invested', label: 'Valor aplicado', icon: TrendingUp, getValue: (u: any) => u.invested },
-  { key: 'profits', label: 'Lucros', icon: DollarSign, getValue: (u: any) => u.profits },
+  { key: 'balance', label: 'Saldo disponível', icon: Wallet, getValue: (u: any) => u.profits },
+  { key: 'invested', label: 'Capital investido', icon: TrendingUp, getValue: (u: any) => u.invested },
+  { key: 'profits', label: 'Lucros', icon: DollarSign, getValue: (u: any) => u.profits > 0 ? u.profits : 0 },
 ] as const;
 
 export default function DashboardCards() {
@@ -15,7 +15,7 @@ export default function DashboardCards() {
   const activeCycles = investments.filter(i => i.userId === user.id && i.status === 'active').length;
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
       {cards.map((card, i) => (
         <div
           key={card.key}
@@ -23,10 +23,10 @@ export default function DashboardCards() {
           style={{ animationDelay: `${i * 80}ms`, animationFillMode: 'forwards' }}
         >
           <div className="flex items-center justify-between mb-3">
-            <span className="text-sm text-muted-foreground">{card.label}</span>
+            <span className="text-xs text-muted-foreground">{card.label}</span>
             <card.icon className="w-4 h-4 text-neon-green opacity-70" />
           </div>
-          <p className="text-2xl font-bold font-mono-data gradient-text-neon">
+          <p className="text-lg sm:text-2xl font-bold font-mono-data gradient-text-neon">
             {formatBRL(card.getValue(user))}
           </p>
         </div>
@@ -36,10 +36,10 @@ export default function DashboardCards() {
         style={{ animationDelay: '240ms', animationFillMode: 'forwards' }}
       >
         <div className="flex items-center justify-between mb-3">
-          <span className="text-sm text-muted-foreground">Motor ativo</span>
+          <span className="text-xs text-muted-foreground">Motor VX1</span>
           <Zap className="w-4 h-4 text-neon-green animate-pulse-glow" />
         </div>
-        <p className="text-2xl font-bold font-mono-data text-neon-green text-glow-green">
+        <p className="text-lg sm:text-2xl font-bold font-mono-data text-neon-green text-glow-green">
           {activeCycles}
         </p>
         <p className="text-xs text-muted-foreground mt-1">
