@@ -60,11 +60,11 @@ export default function Index() {
           </div>
         </div>
 
-        <h1 className="text-5xl sm:text-7xl font-black gradient-text-neon mb-4 animate-fade-up" style={{ lineHeight: '1.05', animationDelay: '80ms' }}>
+        <h1 className="text-5xl sm:text-7xl font-display font-black gradient-text-cyan mb-4 animate-fade-up" style={{ lineHeight: '1.05', animationDelay: '80ms' }}>
           VORTEX
         </h1>
         <p className="text-lg sm:text-xl text-muted-foreground max-w-md mb-3 animate-fade-up" style={{ animationDelay: '160ms' }}>
-          A origem do <span className="text-neon-green font-semibold text-glow-green">VX1</span>
+          A origem do <span className="text-neon-cyan font-semibold text-glow-cyan">VX1</span>
         </p>
         <p className="text-sm text-muted-foreground/70 max-w-sm mb-10 animate-fade-up" style={{ animationDelay: '240ms', textWrap: 'balance' as any }}>
           Tecnologia de elite acessível. Resultados na velocidade da internet moderna.
@@ -73,7 +73,7 @@ export default function Index() {
         <div className="flex gap-3 animate-fade-up" style={{ animationDelay: '320ms' }}>
           <button
             onClick={() => navigate('/auth?mode=login')}
-            className="px-6 py-3 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:brightness-110 transition-all active:scale-[0.97] glow-green"
+            className="px-6 py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:brightness-110 transition-all active:scale-[0.97] glow-cyan"
           >
             Entrar
           </button>
@@ -88,7 +88,7 @@ export default function Index() {
 
       {/* Story */}
       <section className="relative z-10 max-w-2xl mx-auto px-4 pb-16 space-y-8">
-        <h2 className="text-2xl sm:text-3xl font-bold text-center gradient-text-neon mb-10" style={{ lineHeight: '1.2' }}>
+        <h2 className="text-2xl sm:text-3xl font-display font-bold text-center gradient-text-cyan mb-10" style={{ lineHeight: '1.2' }}>
           A História da VORTEX
         </h2>
 

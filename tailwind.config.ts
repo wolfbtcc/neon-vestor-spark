@@ -16,6 +16,7 @@ export default {
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'monospace'],
+        display: ['Orbitron', 'Inter', 'sans-serif'],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -52,6 +53,7 @@ export default {
           foreground: "hsl(var(--card-foreground))",
         },
         neon: {
+          cyan: "hsl(var(--neon-cyan))",
           green: "hsl(var(--neon-green))",
           blue: "hsl(var(--neon-blue))",
         },
@@ -86,7 +88,15 @@ export default {
         },
         "pulse-glow": {
           "0%, 100%": { opacity: "1" },
-          "50%": { opacity: "0.6" },
+          "50%": { opacity: "0.5" },
+        },
+        "pulse-neon": {
+          "0%, 100%": { 
+            textShadow: "0 0 10px hsl(185 100% 50% / 0.6), 0 0 30px hsl(185 100% 50% / 0.25)" 
+          },
+          "50%": { 
+            textShadow: "0 0 20px hsl(185 100% 50% / 0.8), 0 0 50px hsl(185 100% 50% / 0.4), 0 0 80px hsl(185 100% 50% / 0.15)" 
+          },
         },
         "fade-up": {
           from: { opacity: "0", transform: "translateY(16px)", filter: "blur(4px)" },
@@ -96,13 +106,23 @@ export default {
           from: { opacity: "0", transform: "scale(0.95)" },
           to: { opacity: "1", transform: "scale(1)" },
         },
+        "glow-pulse": {
+          "0%, 100%": {
+            boxShadow: "0 0 12px hsl(185 100% 50% / 0.15), inset 0 0 12px hsl(185 100% 50% / 0.04)",
+          },
+          "50%": {
+            boxShadow: "0 0 24px hsl(185 100% 50% / 0.25), inset 0 0 20px hsl(185 100% 50% / 0.08)",
+          },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
         "pulse-glow": "pulse-glow 2s ease-in-out infinite",
+        "pulse-neon": "pulse-neon 2.5s ease-in-out infinite",
         "fade-up": "fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards",
         "scale-in": "scale-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards",
+        "glow-pulse": "glow-pulse 3s ease-in-out infinite",
       },
     },
   },

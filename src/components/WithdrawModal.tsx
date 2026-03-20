@@ -33,14 +33,14 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={onClose}>
       <div className="absolute inset-0 bg-background/80 backdrop-blur-sm" />
-      <div className="relative w-full max-w-md neon-card glow-border-green animate-scale-in" onClick={e => e.stopPropagation()}>
+      <div className="relative w-full max-w-md neon-card glow-border-cyan animate-scale-in" onClick={e => e.stopPropagation()}>
         <button onClick={onClose} className="absolute top-4 right-4 text-muted-foreground hover:text-foreground transition-colors">
           <X className="w-5 h-5" />
         </button>
-        <h2 className="text-xl font-bold mb-4 gradient-text-neon">Sacar</h2>
-        <p className="text-sm text-muted-foreground mb-4">Saldo disponível: <span className="font-mono-data text-foreground">{formatBRL(user.balance)}</span></p>
+        <h2 className="text-lg font-display font-bold mb-4 gradient-text-cyan tracking-wide">SACAR</h2>
+        <p className="text-xs text-muted-foreground mb-4">Saldo disponível: <span className="font-mono-data text-neon-cyan">{formatBRL(user.balance)}</span></p>
         {loyaltyDays < 7 && (
-          <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-sm text-destructive mb-4">
+          <div className="p-3 rounded-xl bg-destructive/10 border border-destructive/20 text-xs text-destructive mb-4">
             Saque disponível após 7 dias de fidelidade ({loyaltyDays}/7 dias).
           </div>
         )}
@@ -52,12 +52,12 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
               value={amount}
               onChange={e => setAmount(e.target.value)}
               placeholder="0,00"
-              className="w-full pl-10 pr-4 py-3 rounded-lg bg-muted border border-border focus:border-neon-green/50 focus:outline-none focus:ring-1 focus:ring-neon-green/30 font-mono-data text-lg transition-all"
+              className="w-full pl-10 pr-4 py-3 rounded-xl bg-muted border border-border focus:border-neon-cyan/50 focus:outline-none focus:ring-1 focus:ring-neon-cyan/30 font-mono-data text-lg transition-all"
             />
           </div>
           <button
             onClick={handleWithdraw}
-            className="w-full py-3 rounded-lg bg-primary text-primary-foreground font-semibold hover:brightness-110 transition-all active:scale-[0.98] glow-green"
+            className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-semibold hover:brightness-110 transition-all active:scale-[0.98] glow-cyan"
           >
             Confirmar saque
           </button>

@@ -2,56 +2,55 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&family=Orbitron:wght@400;500;600;700;800;900&display=swap');
 
 @layer base {
   :root {
-    --background: 220 20% 6%;
-    --foreground: 160 10% 90%;
+    --background: 210 40% 4%;
+    --foreground: 180 10% 92%;
 
-    --card: 220 18% 10%;
-    --card-foreground: 160 10% 90%;
+    --card: 210 35% 7%;
+    --card-foreground: 180 10% 92%;
 
-    --popover: 220 18% 10%;
-    --popover-foreground: 160 10% 90%;
+    --popover: 210 35% 7%;
+    --popover-foreground: 180 10% 92%;
 
-    --primary: 152 70% 45%;
-    --primary-foreground: 220 20% 6%;
+    --primary: 185 100% 50%;
+    --primary-foreground: 210 40% 4%;
 
-    --secondary: 200 60% 40%;
-    --secondary-foreground: 160 10% 95%;
+    --secondary: 152 70% 45%;
+    --secondary-foreground: 210 40% 4%;
 
-    --muted: 220 15% 15%;
-    --muted-foreground: 220 10% 55%;
+    --muted: 210 30% 12%;
+    --muted-foreground: 210 15% 50%;
 
-    --accent: 200 60% 40%;
-    --accent-foreground: 160 10% 95%;
+    --accent: 185 100% 50%;
+    --accent-foreground: 210 40% 4%;
 
     --destructive: 0 72% 51%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 220 15% 18%;
-    --input: 220 15% 18%;
-    --ring: 152 70% 45%;
+    --border: 210 25% 14%;
+    --input: 210 25% 14%;
+    --ring: 185 100% 50%;
 
-    --radius: 0.75rem;
+    --radius: 1rem;
 
-    --sidebar-background: 220 18% 8%;
-    --sidebar-foreground: 160 10% 90%;
-    --sidebar-primary: 152 70% 45%;
-    --sidebar-primary-foreground: 220 20% 6%;
-    --sidebar-accent: 220 15% 15%;
-    --sidebar-accent-foreground: 160 10% 90%;
-    --sidebar-border: 220 15% 18%;
-    --sidebar-ring: 152 70% 45%;
+    --sidebar-background: 210 35% 5%;
+    --sidebar-foreground: 180 10% 92%;
+    --sidebar-primary: 185 100% 50%;
+    --sidebar-primary-foreground: 210 40% 4%;
+    --sidebar-accent: 210 30% 12%;
+    --sidebar-accent-foreground: 180 10% 92%;
+    --sidebar-border: 210 25% 14%;
+    --sidebar-ring: 185 100% 50%;
 
     /* Custom neon tokens */
+    --neon-cyan: 185 100% 50%;
     --neon-green: 152 70% 45%;
     --neon-blue: 200 80% 50%;
-    --neon-glow-green: 0 0% 0% / 0;
-    --neon-glow-blue: 0 0% 0% / 0;
-    --surface-elevated: 220 18% 12%;
-    --surface-overlay: 220 18% 8%;
+    --surface-elevated: 210 30% 10%;
+    --surface-overlay: 210 35% 5%;
   }
 }
 
@@ -61,8 +60,10 @@
   }
 
   body {
-    @apply bg-background text-foreground font-sans antialiased;
+    @apply bg-background text-foreground antialiased;
     font-family: 'Inter', system-ui, sans-serif;
+    background: linear-gradient(180deg, hsl(210 40% 4%) 0%, hsl(215 50% 8%) 100%);
+    min-height: 100vh;
   }
 
   h1, h2, h3, h4, h5, h6 {
@@ -71,6 +72,15 @@
 }
 
 @layer utilities {
+  /* Cyan neon glows */
+  .glow-cyan {
+    box-shadow: 0 0 15px hsl(185 100% 50% / 0.35), 0 0 45px hsl(185 100% 50% / 0.12);
+  }
+
+  .glow-cyan-intense {
+    box-shadow: 0 0 20px hsl(185 100% 50% / 0.5), 0 0 60px hsl(185 100% 50% / 0.2), 0 0 100px hsl(185 100% 50% / 0.08);
+  }
+
   .glow-green {
     box-shadow: 0 0 15px hsl(152 70% 45% / 0.3), 0 0 45px hsl(152 70% 45% / 0.1);
   }
@@ -83,8 +93,9 @@
     box-shadow: 0 0 15px hsl(200 80% 50% / 0.3), 0 0 45px hsl(200 80% 50% / 0.1);
   }
 
-  .glow-blue-intense {
-    box-shadow: 0 0 20px hsl(200 80% 50% / 0.4), 0 0 60px hsl(200 80% 50% / 0.15), inset 0 0 20px hsl(200 80% 50% / 0.05);
+  .glow-border-cyan {
+    border: 1px solid hsl(185 100% 50% / 0.25);
+    box-shadow: 0 0 12px hsl(185 100% 50% / 0.15), inset 0 0 12px hsl(185 100% 50% / 0.04);
   }
 
   .glow-border-green {
@@ -97,6 +108,10 @@
     box-shadow: 0 0 10px hsl(200 80% 50% / 0.15), inset 0 0 10px hsl(200 80% 50% / 0.05);
   }
 
+  .text-glow-cyan {
+    text-shadow: 0 0 10px hsl(185 100% 50% / 0.6), 0 0 30px hsl(185 100% 50% / 0.25), 0 0 60px hsl(185 100% 50% / 0.1);
+  }
+
   .text-glow-green {
     text-shadow: 0 0 10px hsl(152 70% 45% / 0.5), 0 0 30px hsl(152 70% 45% / 0.2);
   }
@@ -106,13 +121,22 @@
   }
 
   .neon-card {
-    @apply rounded-xl bg-card border border-border/50 p-6;
-    box-shadow: 0 0 10px hsl(152 70% 45% / 0.08), 0 4px 24px hsl(220 20% 6% / 0.5);
+    @apply rounded-2xl p-5;
+    background: hsla(210, 35%, 7%, 0.85);
+    border: 1px solid hsl(185 100% 50% / 0.15);
+    box-shadow: 
+      0 0 12px hsl(185 100% 50% / 0.08),
+      0 4px 24px hsl(210 40% 4% / 0.6),
+      inset 0 1px 0 hsl(185 100% 50% / 0.06);
+    backdrop-filter: blur(8px);
     transition: box-shadow 0.3s ease-out, transform 0.2s ease-out;
   }
 
   .neon-card:hover {
-    box-shadow: 0 0 20px hsl(152 70% 45% / 0.15), 0 8px 32px hsl(220 20% 6% / 0.6);
+    box-shadow: 
+      0 0 24px hsl(185 100% 50% / 0.18),
+      0 8px 32px hsl(210 40% 4% / 0.7),
+      inset 0 1px 0 hsl(185 100% 50% / 0.1);
     transform: translateY(-2px);
   }
 
@@ -121,11 +145,26 @@
     font-variant-numeric: tabular-nums;
   }
 
+  .font-display {
+    font-family: 'Orbitron', 'Inter', sans-serif;
+  }
+
   .gradient-text-neon {
-    background: linear-gradient(135deg, hsl(152 70% 50%), hsl(200 80% 55%));
+    background: linear-gradient(135deg, hsl(185 100% 55%), hsl(152 70% 50%));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
+  }
+
+  .gradient-text-cyan {
+    background: linear-gradient(135deg, hsl(185 100% 55%), hsl(200 80% 60%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .text-neon-cyan {
+    color: hsl(185 100% 50%);
   }
 }
 
@@ -134,12 +173,12 @@
   width: 6px;
 }
 ::-webkit-scrollbar-track {
-  background: hsl(220 18% 8%);
+  background: hsl(210 35% 5%);
 }
 ::-webkit-scrollbar-thumb {
-  background: hsl(220 15% 25%);
+  background: hsl(210 25% 20%);
   border-radius: 3px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: hsl(152 70% 45% / 0.5);
+  background: hsl(185 100% 50% / 0.4);
 }
