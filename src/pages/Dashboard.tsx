@@ -12,7 +12,7 @@ import { LogOut, ArrowDownToLine, ArrowUpFromLine, Gift, ShieldAlert, Menu, X, U
 import { toast } from 'sonner';
 
 export default function Dashboard() {
-  const { user, logout, investments, redeemCycle } = usePlatform();
+  const { user, logout } = usePlatform();
   const navigate = useNavigate();
   const [depositOpen, setDepositOpen] = useState(false);
   const [withdrawOpen, setWithdrawOpen] = useState(false);
