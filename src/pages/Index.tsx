@@ -73,7 +73,7 @@ export default function Index() {
         <div className="flex gap-3 animate-fade-up" style={{ animationDelay: '320ms' }}>
           <button
             onClick={() => navigate('/auth?mode=login')}
-            className="px-6 py-3 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:brightness-110 transition-all active:scale-[0.97] glow-green"
+            className="px-6 py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:brightness-110 transition-all active:scale-[0.97] glow-cyan"
           >
             Entrar
           </button>
