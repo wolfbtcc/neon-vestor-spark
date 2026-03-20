@@ -59,7 +59,7 @@ export default function Dashboard() {
         </div>
       </header>
 
-      <main className="container px-4 py-5 space-y-4 max-w-lg mx-auto">
+      <main className="container px-4 py-5 space-y-3 max-w-lg mx-auto">
         {/* Affiliate Link Card */}
         <AffiliatePanel />
 
