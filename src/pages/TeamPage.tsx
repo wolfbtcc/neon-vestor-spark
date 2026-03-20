@@ -14,6 +14,7 @@ export default function TeamPage() {
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [expandedLevel, setExpandedLevel] = useState<number | null>(null);
   const [pixName, setPixName] = useState('');
+  const [pixKey, setPixKey] = useState('');
   const [amount, setAmount] = useState('');
 
   if (!user) { navigate('/'); return null; }
