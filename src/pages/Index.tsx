@@ -60,11 +60,11 @@ export default function Index() {
           </div>
         </div>
 
-        <h1 className="text-5xl sm:text-7xl font-black gradient-text-neon mb-4 animate-fade-up" style={{ lineHeight: '1.05', animationDelay: '80ms' }}>
+        <h1 className="text-5xl sm:text-7xl font-display font-black gradient-text-cyan mb-4 animate-fade-up" style={{ lineHeight: '1.05', animationDelay: '80ms' }}>
           VORTEX
         </h1>
         <p className="text-lg sm:text-xl text-muted-foreground max-w-md mb-3 animate-fade-up" style={{ animationDelay: '160ms' }}>
-          A origem do <span className="text-neon-green font-semibold text-glow-green">VX1</span>
+          A origem do <span className="text-neon-cyan font-semibold text-glow-cyan">VX1</span>
         </p>
         <p className="text-sm text-muted-foreground/70 max-w-sm mb-10 animate-fade-up" style={{ animationDelay: '240ms', textWrap: 'balance' as any }}>
           Tecnologia de elite acessível. Resultados na velocidade da internet moderna.
