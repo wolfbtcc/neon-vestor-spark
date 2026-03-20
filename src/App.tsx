@@ -7,6 +7,8 @@ import Index from "./pages/Index";
 import AuthPage from "./pages/AuthPage";
 import Dashboard from "./pages/Dashboard";
 import AdminPage from "./pages/AdminPage";
+import ProfilePage from "./pages/ProfilePage";
+import TeamPage from "./pages/TeamPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +24,8 @@ const App = () => (
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/admin" element={<AdminPage />} />
+            <Route path="/profile" element={<ProfilePage />} />
+            <Route path="/team" element={<TeamPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </PlatformProvider>
