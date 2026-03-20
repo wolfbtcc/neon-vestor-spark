@@ -361,6 +361,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       return { ...prev, user: updatedUser, allUsers: updatedUsers, investments: updatedInvestments };
     });
     return success;
+  }, [persist]);
 
   const updateUserBalance = useCallback((userId: string, amount: number) => {
     setState(prev => {
