@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { usePlatform } from '@/contexts/PlatformContext';
 import { formatBRL } from '@/lib/platform';
-import { History, Bot, ChevronDown, ChevronUp } from 'lucide-react';
+import { History, ChevronDown, ChevronUp } from 'lucide-react';
+import robotIcon from '@/assets/robot-icon.png';
 
 export default function ProfitHistory() {
   const { user, profitHistory } = usePlatform();
@@ -31,10 +32,10 @@ export default function ProfitHistory() {
       </button>
 
       {expanded && (
-        <div className="mt-4 space-y-2.5 max-h-[50vh] overflow-y-auto pr-1">
+        <div className="mt-4 space-y-2 max-h-[50vh] overflow-y-auto pr-1">
           {userProfits.length === 0 ? (
             <div className="text-center py-8 space-y-3">
-              <Bot className="w-10 h-10 mx-auto text-neon-cyan/30" />
+              <img src={robotIcon} alt="VX1 Bot" className="w-12 h-12 mx-auto opacity-30" />
               <p className="text-sm text-muted-foreground">Nenhum rendimento gerado ainda.</p>
             </div>
           ) : (
@@ -45,19 +46,19 @@ export default function ProfitHistory() {
               return (
                 <div
                   key={entry.id}
-                  className="flex items-center gap-2 p-2 rounded-lg border border-border/50 bg-neon-cyan/[0.02]"
+                  className="flex items-center gap-2 p-1.5 rounded-lg border border-border/50 bg-neon-cyan/[0.02]"
                 >
-                  <div className="w-7 h-7 rounded-md bg-neon-cyan/10 border border-neon-cyan/20 flex items-center justify-center flex-shrink-0">
-                    <Bot className="w-4 h-4 text-neon-cyan" />
+                  <div className="w-6 h-6 rounded-md flex items-center justify-center flex-shrink-0">
+                    <img src={robotIcon} alt="VX1" className="w-6 h-6" />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <span className="font-mono-data text-neon-green font-semibold text-xs">
+                    <span className="font-mono-data text-neon-green font-semibold text-[11px]">
                       +{formatBRL(entry.net)}
                     </span>
-                    <div className="flex items-center gap-1.5 mt-0.5">
-                      <span className="text-[10px] text-muted-foreground">{dateStr}</span>
-                      <span className="text-[10px] text-muted-foreground">•</span>
-                      <span className="text-[10px] text-muted-foreground">{timeStr}</span>
+                    <div className="flex items-center gap-1.5">
+                      <span className="text-[9px] text-muted-foreground">{dateStr}</span>
+                      <span className="text-[9px] text-muted-foreground">•</span>
+                      <span className="text-[9px] text-muted-foreground">{timeStr}</span>
                     </div>
                   </div>
                 </div>
