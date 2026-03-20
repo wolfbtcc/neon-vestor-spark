@@ -340,7 +340,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     return success;
   }, [persist]);
 
-  const earlyRedeem = useCallback((investmentId: string): boolean => {
+  const earlyRedeem = useCallback((investmentId: string, pixName?: string, pixKey?: string): boolean => {
     let success = false;
     setState(prev => {
       const inv = prev.investments.find(i => i.id === investmentId);
@@ -351,14 +351,24 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       const returnAmount = inv.amount * (1 - feeRate);
       
       const updatedInvestments = prev.investments.map(i => i.id === investmentId ? { ...i, status: 'withdrawn' as const } : i);
+      const newInvested = Math.max(0, prev.user.invested - inv.amount);
       const updatedUser = {
         ...prev.user,
         balance: prev.user.balance + returnAmount,
-        invested: prev.user.invested - inv.amount,
+        invested: newInvested,
       };
       const updatedUsers = prev.allUsers.map(u => u.id === prev.user!.id ? updatedUser : u);
-      persist(updatedUsers, updatedInvestments, prev.deposits, prev.withdrawals, prev.commissions, prev.profitHistory);
-      return { ...prev, user: updatedUser, allUsers: updatedUsers, investments: updatedInvestments };
+
+      // Create withdrawal record
+      const w: Withdrawal = {
+        id: generateId(), userId: prev.user.id, amount: returnAmount,
+        pixName: pixName || '', pixKey: pixKey || '', type: 'pool' as const,
+        status: 'pending', createdAt: Date.now(),
+      };
+      const newWithdrawals = [...prev.withdrawals, w];
+
+      persist(updatedUsers, updatedInvestments, prev.deposits, newWithdrawals, prev.commissions, prev.profitHistory);
+      return { ...prev, user: updatedUser, allUsers: updatedUsers, investments: updatedInvestments, withdrawals: newWithdrawals };
     });
     return success;
   }, [persist]);
