@@ -18,6 +18,7 @@ export default function AuthPage() {
   const [showCountryList, setShowCountryList] = useState(false);
   const [password, setPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const { login, register, user } = usePlatform();
   const navigate = useNavigate();
 
@@ -29,32 +30,43 @@ export default function AuthPage() {
     setIsLogin(mode !== 'register');
   }, [mode]);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     if (!email.trim() || !password.trim()) { toast.error('Preencha todos os campos'); return; }
     if (password.length < 6) { toast.error('Senha deve ter no mínimo 6 caracteres'); return; }
 
-    if (isLogin) {
-      if (login(email, password)) {
-        toast.success('Login realizado!');
-        navigate('/dashboard');
+    setSubmitting(true);
+    try {
+      if (isLogin) {
+        const success = await login(email, password);
+        if (success) {
+          toast.success('Login realizado!');
+          navigate('/dashboard');
+        } else {
+          toast.error('Credenciais inválidas');
+        }
       } else {
-        toast.error('Credenciais inválidas');
+        if (!name.trim()) { toast.error('Preencha o nome'); setSubmitting(false); return; }
+        if (!phone.trim()) { toast.error('Preencha o telefone'); setSubmitting(false); return; }
+        if (!validatePhone(phone, selectedCountry.code)) {
+          toast.error(`Número de telefone inválido para ${selectedCountry.name}. Inclua o DDD.`);
+          setSubmitting(false);
+          return;
+        }
+        const fullPhone = `${selectedCountry.dial} ${phone}`;
+        const success = await register(name, email, password, refCode, fullPhone, selectedCountry.code);
+        if (success) {
+          toast.success('Conta criada com sucesso!');
+          navigate('/dashboard');
+        } else {
+          toast.error('Email já cadastrado');
+        }
       }
-    } else {
-      if (!name.trim()) { toast.error('Preencha o nome'); return; }
-      if (!phone.trim()) { toast.error('Preencha o telefone'); return; }
-      if (!validatePhone(phone, selectedCountry.code)) {
-        toast.error(`Número de telefone inválido para ${selectedCountry.name}. Inclua o DDD.`);
-        return;
-      }
-      const fullPhone = `${selectedCountry.dial} ${phone}`;
-      if (register(name, email, password, refCode, fullPhone, selectedCountry.code)) {
-        toast.success('Conta criada com sucesso!');
-        navigate('/dashboard');
-      } else {
-        toast.error('Email já cadastrado');
-      }
+    } catch (err) {
+      toast.error('Erro ao processar. Tente novamente.');
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -162,8 +174,8 @@ export default function AuthPage() {
             </div>
           )}
 
-          <button type="submit" className="w-full py-3 rounded-lg bg-primary text-primary-foreground font-semibold hover:brightness-110 transition-all active:scale-[0.97] glow-green">
-            {isLogin ? 'Entrar' : 'Criar conta'}
+          <button type="submit" disabled={submitting} className="w-full py-3 rounded-lg bg-primary text-primary-foreground font-semibold hover:brightness-110 transition-all active:scale-[0.97] glow-green disabled:opacity-50">
+            {submitting ? 'Processando...' : (isLogin ? 'Entrar' : 'Criar conta')}
           </button>
 
           <p className="text-center text-sm text-muted-foreground">
@@ -172,12 +184,6 @@ export default function AuthPage() {
               {isLogin ? 'Cadastre-se' : 'Faça login'}
             </button>
           </p>
-
-          {isLogin && (
-            <p className="text-center text-xs text-muted-foreground">
-              Admin: admin@platform.com / admin123
-            </p>
-          )}
         </form>
       </div>
     </div>
