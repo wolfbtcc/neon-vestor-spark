@@ -185,7 +185,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     return true;
   }, []);
 
-  const register = useCallback((name: string, email: string, password: string, referralCode?: string): boolean => {
+  const register = useCallback((name: string, email: string, password: string, referralCode?: string, phone?: string, phoneCountry?: string): boolean => {
     const stored = loadState();
     if (stored.users.some(u => u.email === email)) return false;
     const referrer = referralCode ? stored.users.find(u => u.referralCode === referralCode) : null;
@@ -193,6 +193,8 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       id: generateId(),
       name,
       email,
+      phone: phone || '',
+      phoneCountry: phoneCountry || 'BR',
       password,
       balance: 0,
       invested: 0,
