@@ -86,6 +86,11 @@ export default function Index() {
             {t('landing.register')}
           </button>
         </div>
+
+        {/* Social Proof */}
+        <div className="mt-8 w-full animate-fade-up" style={{ animationDelay: '400ms' }}>
+          <SocialProofCarousel />
+        </div>
       </section>
 
       {/* Story */}
