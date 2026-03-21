@@ -13,6 +13,7 @@ import TeamPage from "./pages/TeamPage";
 import RedeemPage from "./pages/RedeemPage";
 import WithdrawalHistoryPage from "./pages/WithdrawalHistoryPage";
 import CyclesPage from "./pages/CyclesPage";
+import PerformanceBonusPage from "./pages/PerformanceBonusPage";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
