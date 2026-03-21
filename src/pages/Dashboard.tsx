@@ -6,6 +6,7 @@ import DashboardCards from '@/components/DashboardCards';
 import LoyaltyPool from '@/components/LoyaltyPool';
 import ActiveCycles from '@/components/ActiveCycles';
 import AffiliatePanel from '@/components/AffiliatePanel';
+import DashboardCarousel from '@/components/DashboardCarousel';
 import ProfitHistory from '@/components/ProfitHistory';
 import DepositModal from '@/components/DepositModal';
 import WithdrawModal from '@/components/WithdrawModal';
@@ -114,6 +115,7 @@ export default function Dashboard() {
 
       <main className="container px-4 py-5 space-y-3 max-w-lg mx-auto">
         <AffiliatePanel />
+        <DashboardCarousel />
         <DashboardCards />
 
         {/* Action buttons */}
