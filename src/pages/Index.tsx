@@ -1,35 +1,14 @@
 import { usePlatform } from '@/contexts/PlatformContext';
+import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useEffect } from 'react';
 import { Zap, Globe, TrendingUp, Shield } from 'lucide-react';
+import LanguageSelector from '@/components/LanguageSelector';
 import globeBg from '@/assets/globe-bg.png';
-
-const storyData = [
-  {
-    icon: Globe,
-    title: 'O Ponto de Ruptura em Singapura',
-    text: 'Tudo começou nos servidores de alta vizinhança do centro financeiro de Singapura. Um grupo de engenheiros de sistemas, ex-colaboradores de grandes bolsas de valores, percebeu que o sistema financeiro tradicional era "lento". Enquanto o mundo esperava 24 horas para ver lucros, os grandes bancos ganhavam milhões em milissegundos através de micro-oscilações de câmbio e liquidez.',
-  },
-  {
-    icon: Zap,
-    title: 'O Nascimento do VX1',
-    subtitle: 'O "Motor de Fluxo"',
-    text: 'Eles decidiram que não precisavam mais de bancos. Eles criaram o VX1, um algoritmo de Alta Frequência (HFT) projetado para não dormir. O VX1 não espera o dia acabar para calcular o lucro; ele varre o mercado global em busca de frações de centavos a cada batida de coração. Ele foi apelidado de VORTEX porque ele cria um redemoinho de dados que atrai pequenas margens de lucro de milhares de transações que acontecem ao redor do mundo a cada instante.',
-  },
-  {
-    icon: TrendingUp,
-    title: 'A Revolução dos 30 Segundos',
-    text: 'A grande inovação do VORTEX foi a quebra da barreira do tempo. Enquanto outras plataformas "travam" o seu dinheiro por dias, o VX1 processa as operações em tempo real. A cada 30 segundos, o VX1 finaliza uma micro-operação global e injeta o lucro diretamente na sua conta. Você não precisa esperar o meio-dia; você vê a sua evolução financeira acontecer ao vivo, segundo a segundo, na palma da sua mão.',
-  },
-  {
-    icon: Shield,
-    title: 'O Poder da Escala Global',
-    text: 'O VORTEX VX1 conecta o capital de investidores comuns em um único "super-fluxo". Ao colocar apenas $5, o seu saldo se junta ao poder computacional do VX1 para capturar oportunidades que seriam impossíveis sozinho. É a tecnologia de elite, finalmente acessível, entregando resultados na velocidade da internet moderna.',
-  },
-];
 
 export default function Index() {
   const { user, loading } = usePlatform();
+  const { t } = useLanguage();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const refCode = searchParams.get('ref') || '';
@@ -46,14 +25,26 @@ export default function Index() {
     navigate(`/auth?${params.toString()}`);
   };
 
+  const storyData = [
+    { icon: Globe, titleKey: 'story.1.title', textKey: 'story.1.text' },
+    { icon: Zap, titleKey: 'story.2.title', subtitleKey: 'story.2.subtitle', textKey: 'story.2.text' },
+    { icon: TrendingUp, titleKey: 'story.3.title', textKey: 'story.3.text' },
+    { icon: Shield, titleKey: 'story.4.title', textKey: 'story.4.text' },
+  ];
+
   return (
     <div className="min-h-screen relative overflow-x-hidden">
-      {/* Globe background */}
-      <div className="fixed inset-0 flex items-center justify-center pointer-events-none z-0">
+      {/* Language selector */}
+      <div className="fixed top-4 right-4 z-50">
+        <LanguageSelector />
+      </div>
+
+      {/* Globe background - larger and more visible, above title */}
+      <div className="absolute top-[5%] left-1/2 -translate-x-1/2 pointer-events-none z-0">
         <img
           src={globeBg}
           alt=""
-          className="w-[80vw] max-w-[700px] opacity-[0.07] animate-[spin_120s_linear_infinite]"
+          className="w-[90vw] max-w-[800px] opacity-[0.18] animate-[spin_120s_linear_infinite]"
         />
       </div>
 
@@ -66,7 +57,7 @@ export default function Index() {
         <div className="animate-fade-up" style={{ animationDelay: '0ms' }}>
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-primary/30 bg-primary/5 text-primary text-xs font-medium mb-6 tracking-wide">
             <Zap className="w-3.5 h-3.5" />
-            ALGORITMO HFT DE ALTA FREQUÊNCIA
+            {t('landing.badge')}
           </div>
         </div>
 
@@ -74,10 +65,10 @@ export default function Index() {
           VORTEX
         </h1>
         <p className="text-lg sm:text-xl text-muted-foreground max-w-md mb-3 animate-fade-up" style={{ animationDelay: '160ms' }}>
-          A origem do <span className="text-neon-cyan font-semibold text-glow-cyan">VX1</span>
+          {t('landing.subtitle')} <span className="text-neon-cyan font-semibold text-glow-cyan">VX1</span>
         </p>
         <p className="text-sm text-muted-foreground/70 max-w-sm mb-10 animate-fade-up" style={{ animationDelay: '240ms', textWrap: 'balance' as any }}>
-          Tecnologia de elite acessível. Resultados na velocidade da internet moderna.
+          {t('landing.desc')}
         </p>
 
         <div className="flex gap-3 animate-fade-up" style={{ animationDelay: '320ms' }}>
@@ -85,13 +76,13 @@ export default function Index() {
             onClick={() => goAuth('login')}
             className="px-6 py-3 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:brightness-110 transition-all active:scale-[0.97] glow-cyan"
           >
-            Entrar
+            {t('landing.login')}
           </button>
           <button
             onClick={() => goAuth('register')}
             className="px-6 py-3 rounded-lg border border-primary/40 text-primary font-semibold text-sm hover:bg-primary/10 transition-all active:scale-[0.97]"
           >
-            Cadastre-se
+            {t('landing.register')}
           </button>
         </div>
       </section>
@@ -99,7 +90,7 @@ export default function Index() {
       {/* Story */}
       <section className="relative z-10 max-w-2xl mx-auto px-4 pb-16 space-y-8">
         <h2 className="text-2xl sm:text-3xl font-display font-bold text-center gradient-text-cyan mb-10" style={{ lineHeight: '1.2' }}>
-          A História da VORTEX
+          {t('landing.story_title')}
         </h2>
 
         {storyData.map((item, i) => {
@@ -115,11 +106,11 @@ export default function Index() {
                   <Icon className="w-5 h-5 text-primary" />
                 </div>
                 <div>
-                  <h3 className="text-base font-bold text-foreground mb-1">{item.title}</h3>
-                  {item.subtitle && (
-                    <p className="text-xs text-neon-blue font-medium mb-2">{item.subtitle}</p>
+                  <h3 className="text-base font-bold text-foreground mb-1">{t(item.titleKey)}</h3>
+                  {item.subtitleKey && (
+                    <p className="text-xs text-neon-blue font-medium mb-2">{t(item.subtitleKey)}</p>
                   )}
-                  <p className="text-sm text-muted-foreground leading-relaxed">{item.text}</p>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{t(item.textKey)}</p>
                 </div>
               </div>
             </div>
@@ -129,25 +120,25 @@ export default function Index() {
 
       {/* CTA bottom */}
       <section className="relative z-10 max-w-sm mx-auto px-4 pb-24 text-center space-y-4">
-        <p className="text-muted-foreground text-sm">Pronto para começar?</p>
+        <p className="text-muted-foreground text-sm">{t('landing.ready')}</p>
         <div className="flex gap-3 justify-center">
           <button
             onClick={() => goAuth('login')}
             className="px-6 py-3 rounded-lg bg-primary text-primary-foreground font-semibold text-sm hover:brightness-110 transition-all active:scale-[0.97] glow-green"
           >
-            Entrar
+            {t('landing.login')}
           </button>
           <button
             onClick={() => goAuth('register')}
             className="px-6 py-3 rounded-lg border border-primary/40 text-primary font-semibold text-sm hover:bg-primary/10 transition-all active:scale-[0.97]"
           >
-            Cadastre-se
+            {t('landing.register')}
           </button>
         </div>
       </section>
 
       <footer className="relative z-10 border-t border-border/30 py-6 text-center">
-        <p className="text-xs text-muted-foreground/50">© 2026 VORTEX — Tecnologia VX1</p>
+        <p className="text-xs text-muted-foreground/50">{t('landing.footer')}</p>
       </footer>
     </div>
   );
