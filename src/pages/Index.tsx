@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useEffect } from 'react';
 import { Zap, Globe, TrendingUp, Shield } from 'lucide-react';
 import LanguageSelector from '@/components/LanguageSelector';
+import SocialProofCarousel from '@/components/SocialProofCarousel';
 import globeBg from '@/assets/globe-bg.png';
 
 export default function Index() {
