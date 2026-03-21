@@ -162,6 +162,22 @@ const translations: Record<string, Record<Language, string>> = {
   'auth.welcome': { pt: 'Bem-vindo ao VORTEX', en: 'Welcome to VORTEX', es: 'Bienvenido a VORTEX' },
   'auth.create_account': { pt: 'Criar Conta', en: 'Create Account', es: 'Crear Cuenta' },
   'auth.check_email': { pt: 'Verifique seu e-mail para confirmar o cadastro.', en: 'Check your email to confirm your registration.', es: 'Revisa tu correo para confirmar el registro.' },
+
+  // Performance Bonus
+  'dash.bonus': { pt: 'Bônus de Performance', en: 'Performance Bonus', es: 'Bono de Rendimiento' },
+  'bonus.title': { pt: 'BÔNUS DE PERFORMANCE', en: 'PERFORMANCE BONUS', es: 'BONO DE RENDIMIENTO' },
+  'bonus.subtitle': { pt: 'Alcance metas e ganhe prêmios incríveis', en: 'Reach goals and earn amazing prizes', es: 'Alcanza metas y gana premios increíbles' },
+  'bonus.your_volume': { pt: 'Seu volume de indicações', en: 'Your referral volume', es: 'Tu volumen de referencias' },
+  'bonus.refer': { pt: 'Indicar', en: 'Refer', es: 'Referir' },
+  'bonus.rewards': { pt: 'Recompensas', en: 'Rewards', es: 'Recompensas' },
+  'bonus.via_pix': { pt: 'no Pix', en: 'via Pix', es: 'por Pix' },
+  'bonus.iphone': { pt: 'iPhone 17 Pro Max', en: 'iPhone 17 Pro Max', es: 'iPhone 17 Pro Max' },
+  'bonus.start': { pt: 'Nível Start', en: 'Start Level', es: 'Nivel Start' },
+  'bonus.builder': { pt: 'Nível Builder', en: 'Builder Level', es: 'Nivel Builder' },
+  'bonus.pro': { pt: 'Nível Pro', en: 'Pro Level', es: 'Nivel Pro' },
+  'bonus.elite': { pt: 'Nível Elite', en: 'Elite Level', es: 'Nivel Elite' },
+  'bonus.how': { pt: 'Como funciona', en: 'How it works', es: 'Cómo funciona' },
+  'bonus.how_text': { pt: 'Indique pessoas para a plataforma. Quando o volume total de depósitos dos seus indicados atingir cada meta, você recebe automaticamente o bônus correspondente via Pix. Os bônus são cumulativos!', en: 'Refer people to the platform. When the total deposit volume from your referrals reaches each goal, you automatically receive the corresponding bonus via Pix. Bonuses are cumulative!', es: 'Refiere personas a la plataforma. Cuando el volumen total de depósitos de tus referidos alcance cada meta, recibes automáticamente el bono correspondiente vía Pix. ¡Los bonos son acumulativos!' },
 };
 
 const LanguageContext = createContext<LanguageContextType | null>(null);

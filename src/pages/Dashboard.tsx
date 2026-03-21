@@ -91,6 +91,13 @@ export default function Dashboard() {
                       <RefreshCw className="w-4 h-4 text-neon-cyan" />
                       <span className="text-sm text-foreground">{t('dash.cycles')}</span>
                     </button>
+                    <button
+                      onClick={() => { setMenuOpen(false); navigate('/bonus'); }}
+                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors text-left"
+                    >
+                      <Trophy className="w-4 h-4 text-yellow-400" />
+                      <span className="text-sm text-foreground">{t('dash.bonus')}</span>
+                    </button>
                     <div className="border-t border-border" />
                     <button
                       onClick={() => { setMenuOpen(false); logout(); navigate('/'); }}

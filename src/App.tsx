@@ -35,6 +35,7 @@ const App = () => (
               <Route path="/redeem" element={<RedeemPage />} />
               <Route path="/withdrawal-history" element={<WithdrawalHistoryPage />} />
               <Route path="/cycles" element={<CyclesPage />} />
+              <Route path="/bonus" element={<PerformanceBonusPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </PlatformProvider>
