@@ -115,6 +115,7 @@ export default function Dashboard() {
 
       <main className="container px-4 py-5 space-y-3 max-w-lg mx-auto">
         <AffiliatePanel />
+        <DashboardCarousel />
         <DashboardCards />
 
         {/* Action buttons */}
