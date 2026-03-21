@@ -11,7 +11,7 @@ import ProfitHistory from '@/components/ProfitHistory';
 import DepositModal from '@/components/DepositModal';
 import WithdrawModal from '@/components/WithdrawModal';
 import LanguageSelector from '@/components/LanguageSelector';
-import { LogOut, ArrowDownToLine, ArrowUpFromLine, Gift, ShieldAlert, Menu, X, User, Users, History, RefreshCw } from 'lucide-react';
+import { LogOut, ArrowDownToLine, ArrowUpFromLine, Gift, ShieldAlert, Menu, X, User, Users, History, RefreshCw, Trophy } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Dashboard() {
