@@ -42,7 +42,7 @@ export default function DashboardCards() {
             style={{ animationDelay: `${i * 80}ms`, animationFillMode: 'forwards' }}
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+              <span className="text-xs font-semibold tracking-widest text-foreground/80 uppercase">
                 {card.label}
               </span>
               <Icon className="w-5 h-5 flex-shrink-0 text-neon-cyan opacity-70" />
@@ -52,7 +52,7 @@ export default function DashboardCards() {
             >
               {card.value}
             </p>
-            <p className="text-xs text-muted-foreground mt-1">{card.sub}</p>
+            <p className="text-xs text-foreground/60 mt-1">{card.sub}</p>
           </div>
         );
       })}
