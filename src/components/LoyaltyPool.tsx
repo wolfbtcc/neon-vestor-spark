@@ -57,7 +57,13 @@ export default function LoyaltyPool() {
           <>
             <div className="flex justify-between text-xs">
               <span className="text-muted-foreground">Saldo Pool</span>
-              <span className="font-mono-data text-neon-cyan font-bold">{formatBRL(poolBalance)}</span>
+              <span className="font-mono-data text-neon-cyan font-bold">
+                ${poolBalance < 0.01 && poolBalance > 0 
+                  ? poolBalance.toFixed(4) 
+                  : poolBalance < 1 
+                    ? poolBalance.toFixed(4)
+                    : formatBRL(poolBalance)}
+              </span>
             </div>
             <div className="w-full h-2.5 bg-muted rounded-full overflow-hidden">
               <div
