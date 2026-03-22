@@ -36,7 +36,7 @@ export default function AuthPage() {
     if (submitting) return;
     if (!email.trim() || !password.trim()) { toast.error('Preencha todos os campos'); return; }
     if (password.length < 6) { toast.error('Senha deve ter no mínimo 6 caracteres'); return; }
-
+    if (!isLogin && password !== confirmPassword) { toast.error('As senhas não coincidem'); return; }
     setSubmitting(true);
     try {
       if (isLogin) {
