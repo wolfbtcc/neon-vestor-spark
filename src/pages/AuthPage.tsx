@@ -169,6 +169,18 @@ export default function AuthPage() {
             </button>
           </div>
 
+          {!isLogin && (
+            <div className="relative">
+              <input
+                type={showPw ? 'text' : 'password'}
+                placeholder="Confirmar senha"
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                className="w-full px-4 py-3 pr-10 rounded-lg bg-muted border border-border focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all text-sm"
+              />
+            </div>
+          )}
+
           {!isLogin && refCode && (
             <div className="text-xs text-primary bg-primary/10 rounded-lg px-3 py-2">
               Código de referência: <span className="font-mono-data">{refCode}</span>
