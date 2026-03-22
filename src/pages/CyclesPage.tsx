@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { formatBRL, CYCLES } from '@/lib/platform';
 import { ArrowLeft, Zap, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
-
-const cycleIcons = ['⚡', '🔄', '🌊', '💎', '🔥'];
+import vx1Bot from '@/assets/vx1-bot.png';
 
 export default function CyclesPage() {
   const { user, invest } = usePlatform();
