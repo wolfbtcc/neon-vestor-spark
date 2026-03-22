@@ -17,6 +17,7 @@ export default function AuthPage() {
   const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
   const [showCountryList, setShowCountryList] = useState(false);
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const { login, register, user } = usePlatform();
