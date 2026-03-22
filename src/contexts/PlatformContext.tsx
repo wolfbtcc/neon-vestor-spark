@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import Decimal from 'decimal.js';
 import {
   User, Investment, Deposit, Withdrawal, Commission, ProfitEntry,
   generatePixCode, generateWalletAddress,
@@ -35,7 +36,8 @@ interface PlatformContextType extends PlatformState {
 
 const PlatformContext = createContext<PlatformContextType | null>(null);
 
-const POOL_FEE = 0.15;
+Decimal.set({ precision: 20, rounding: Decimal.ROUND_DOWN });
+const POOL_FEE = new Decimal('0.15');
 
 function profileToUser(p: any): User {
   return {
@@ -175,31 +177,37 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       if (activeInvs.length === 0) return;
 
       const now = Date.now();
-      let totalNet = 0;
+      let totalNet = new Decimal(0);
 
       for (const inv of activeInvs) {
-        const totalProfit = inv.amount * (inv.returnPercent / 100);
-        const durationSeconds = inv.durationDays * 86400;
-        const profitPer30s = totalProfit / (durationSeconds / 30);
-        const fee = profitPer30s * POOL_FEE;
-        const net = profitPer30s - fee;
-        totalNet += net;
+        const amount = new Decimal(inv.amount);
+        const returnPct = new Decimal(inv.returnPercent);
+        const durationDays = new Decimal(inv.durationDays);
 
-        // Insert profit entry
+        const totalProfit = amount.mul(returnPct).div(100);
+        const durationSeconds = durationDays.mul(86400);
+        const profitPer30s = totalProfit.div(durationSeconds.div(30));
+        const fee = profitPer30s.mul(POOL_FEE);
+        const net = profitPer30s.minus(fee);
+        totalNet = totalNet.plus(net);
+
+        // Insert profit entry with full precision
         await supabase.from('profit_history').insert({
           user_id: state.user!.id,
-          amount: profitPer30s,
-          fee,
-          net,
+          amount: profitPer30s.toNumber(),
+          fee: fee.toNumber(),
+          net: net.toNumber(),
           investment_id: inv.id,
         });
       }
 
-      if (totalNet > 0) {
-        // Update user profits and balance
+      if (totalNet.gt(0)) {
+        const newProfits = new Decimal(state.user!.profits).plus(totalNet);
+        const newBalance = new Decimal(state.user!.balance).plus(totalNet);
+
         await supabase.from('profiles').update({
-          profits: state.user!.profits + totalNet,
-          balance: state.user!.balance + totalNet,
+          profits: newProfits.toNumber(),
+          balance: newBalance.toNumber(),
         }).eq('user_id', state.user!.id);
 
         // Check completed cycles
