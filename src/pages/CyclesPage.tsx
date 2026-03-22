@@ -66,8 +66,8 @@ export default function CyclesPage() {
                   className="w-full p-5 rounded-2xl border border-border/50 bg-card/50 hover:border-neon-cyan/50 hover:bg-neon-cyan/5 transition-all active:scale-[0.98] text-left group"
                 >
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-xl bg-neon-cyan/10 border border-neon-cyan/20 flex items-center justify-center text-xl shrink-0 group-hover:bg-neon-cyan/20 transition-colors">
-                      {cycleIcons[idx]}
+                    <div className="w-12 h-12 rounded-xl overflow-hidden border border-neon-cyan/20 shrink-0 group-hover:border-neon-cyan/50 transition-colors">
+                      <img src={vx1Bot} alt="VX1 Bot" className="w-full h-full object-cover" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2 mb-1">
