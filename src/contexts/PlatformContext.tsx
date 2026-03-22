@@ -230,8 +230,8 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        // Use setTimeout to avoid deadlock with Supabase auth
-        setTimeout(() => loadUserData(session.user.id), 0);
+        // Catch up yields on sign in / initial load
+        setTimeout(() => loadUserData(session.user.id, true), 0);
       } else {
         setState(prev => ({ ...prev, user: null, loading: false }));
       }
@@ -240,7 +240,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     // Check existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        loadUserData(session.user.id);
+        loadUserData(session.user.id, true);
       } else {
         setState(prev => ({ ...prev, loading: false }));
       }
