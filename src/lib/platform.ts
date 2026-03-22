@@ -84,6 +84,7 @@ export interface Commission {
 
 export const CYCLES = [
   { days: 1, returnPercent: 1.5, label: '1 dia', name: 'Vortex Flash' },
+  { days: 7, returnPercent: 5, label: '7 dias', name: 'Vortex Pulse' },
   { days: 15, returnPercent: 10, label: '15 dias', name: 'Vortex Flow' },
   { days: 30, returnPercent: 200, label: '30 dias', name: 'Vortex Prime' },
   { days: 60, returnPercent: 300, label: '60 dias', name: 'Vortex Omega' },

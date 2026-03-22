@@ -4,7 +4,7 @@ import { formatBRL, CYCLES } from '@/lib/platform';
 import { ArrowLeft, Zap, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 
-const cycleIcons = ['⚡', '🌊', '💎', '🔥'];
+const cycleIcons = ['⚡', '🔄', '🌊', '💎', '🔥'];
 
 export default function CyclesPage() {
   const { user, invest } = usePlatform();

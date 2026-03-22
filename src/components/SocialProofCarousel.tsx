@@ -15,6 +15,7 @@ const userDatabase = [
 
 const cycles = [
   { name: "Ciclo 1 Dia", minVal: 1, maxVal: 5 },
+  { name: "Ciclo 7 Dias", minVal: 3, maxVal: 10 },
   { name: "Ciclo 15 Dias", minVal: 5, maxVal: 15 },
   { name: "Ciclo 30 Dias", minVal: 40, maxVal: 60 },
   { name: "Ciclo 60 Dias", minVal: 50, maxVal: 80 },
