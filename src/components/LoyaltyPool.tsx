@@ -2,6 +2,7 @@ import { usePlatform } from '@/contexts/PlatformContext';
 import { formatBRL } from '@/lib/platform';
 import { toast } from 'sonner';
 import { Lock, CalendarCheck } from 'lucide-react';
+import Decimal from 'decimal.js';
 
 function getBrazilNow(): Date {
   return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
@@ -24,10 +25,11 @@ export default function LoyaltyPool() {
   const { user, profitHistory, withdraw, invest } = usePlatform();
   const { available, daysLeft } = getPoolStatus();
 
-  // Pool balance = sum of all fees from profit history
+  // Pool balance = sum of all fees from profit history using Decimal.js
   const poolBalance = profitHistory
     .filter(p => p.userId === user?.id)
-    .reduce((sum, p) => sum + p.fee, 0);
+    .reduce((sum, p) => sum.plus(new Decimal(p.fee)), new Decimal(0))
+    .toNumber();
 
   // Progress bar grows with each yield entry (capped at 100%)
   const entryCount = profitHistory.filter(p => p.userId === user?.id).length;
