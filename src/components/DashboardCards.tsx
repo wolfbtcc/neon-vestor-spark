@@ -42,7 +42,7 @@ export default function DashboardCards() {
             style={{ animationDelay: `${i * 80}ms`, animationFillMode: 'forwards' }}
           >
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+              <span className="text-xs font-semibold tracking-widest text-foreground/80 uppercase">
                 {card.label}
               </span>
               <Icon className="w-5 h-5 flex-shrink-0 text-neon-cyan opacity-70" />
@@ -52,7 +52,7 @@ export default function DashboardCards() {
             >
               {card.value}
             </p>
-            <p className="text-xs text-muted-foreground mt-1">{card.sub}</p>
+            <p className="text-xs text-foreground/60 mt-1">{card.sub}</p>
           </div>
         );
       })}
@@ -63,19 +63,19 @@ export default function DashboardCards() {
         style={{ animationDelay: `${3 * 80}ms`, animationFillMode: 'forwards' }}
       >
         <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">
+          <span className="text-xs font-semibold tracking-widest text-foreground/80 uppercase">
             MOTOR VX1
           </span>
           <Zap className={`w-5 h-5 flex-shrink-0 ${activeCycles > 0 ? 'text-neon-green animate-pulse-glow' : 'text-neon-cyan'} opacity-70`} />
         </div>
         <p
           className={`font-bold font-mono-data leading-tight text-xl ${
-            activeCycles > 0 ? 'text-neon-green' : 'text-muted-foreground'
+            activeCycles > 0 ? 'text-neon-green' : 'text-foreground/50'
           }`}
         >
           {activeCycles > 0 ? 'ATIVO' : 'INATIVO'}
         </p>
-        <p className="text-xs text-muted-foreground mt-1">{activeCycles} ciclo(s) ativo(s)</p>
+        <p className="text-xs text-foreground/60 mt-1">{activeCycles} ciclo(s) ativo(s)</p>
       </div>
     </div>
   );
