@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import Decimal from 'decimal.js';
 import {
   User, Investment, Deposit, Withdrawal, Commission, ProfitEntry,
   generatePixCode, generateWalletAddress,
