@@ -36,7 +36,8 @@ interface PlatformContextType extends PlatformState {
 
 const PlatformContext = createContext<PlatformContextType | null>(null);
 
-const POOL_FEE = 0.15;
+Decimal.set({ precision: 20, rounding: Decimal.ROUND_DOWN });
+const POOL_FEE = new Decimal('0.15');
 
 function profileToUser(p: any): User {
   return {
