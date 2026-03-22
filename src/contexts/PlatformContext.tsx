@@ -84,7 +84,75 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     loading: true,
   });
 
-  const loadUserData = useCallback(async (userId: string) => {
+  const catchUpYields = useCallback(async (userId: string, activeInvestments: Investment[]) => {
+    if (activeInvestments.length === 0) return;
+
+    const now = Date.now();
+    let totalNet = new Decimal(0);
+    let totalPool = new Decimal(0);
+
+    for (const inv of activeInvestments) {
+      // Find last profit entry for this investment
+      const { data: lastProfit } = await supabase
+        .from('profit_history')
+        .select('created_at')
+        .eq('investment_id', inv.id)
+        .order('created_at', { ascending: false })
+        .limit(1);
+
+      const lastTime = lastProfit && lastProfit.length > 0
+        ? new Date(lastProfit[0].created_at).getTime()
+        : inv.startDate;
+
+      const elapsedMs = Math.min(now, inv.endDate) - lastTime;
+      if (elapsedMs < 30000) continue; // Less than one cycle passed
+
+      const intervals = Math.floor(elapsedMs / 30000);
+      if (intervals <= 0) continue;
+
+      const amount = new Decimal(inv.amount);
+      const returnPct = new Decimal(inv.returnPercent);
+      const durationDays = new Decimal(inv.durationDays);
+      const totalProfit = amount.mul(returnPct).div(100);
+      const durationSeconds = durationDays.mul(86400);
+      const profitPer30s = totalProfit.div(durationSeconds.div(30));
+
+      const totalBruto = profitPer30s.mul(intervals);
+      const fee = totalBruto.mul(POOL_FEE);
+      const net = totalBruto.minus(fee);
+
+      totalNet = totalNet.plus(net);
+      totalPool = totalPool.plus(fee);
+
+      // Insert one aggregated profit entry for the catch-up period
+      await supabase.from('profit_history').insert({
+        user_id: userId,
+        amount: totalBruto.toNumber(),
+        fee: fee.toNumber(),
+        net: net.toNumber(),
+        investment_id: inv.id,
+      });
+
+      // Mark completed if past end date
+      if (now >= inv.endDate) {
+        await supabase.from('investments').update({ status: 'completed' }).eq('id', inv.id);
+      }
+    }
+
+    if (totalNet.gt(0)) {
+      const { data: profile } = await supabase.from('profiles').select('profits, balance').eq('user_id', userId).single();
+      if (profile) {
+        const newProfits = new Decimal(profile.profits).plus(totalNet);
+        const newBalance = new Decimal(profile.balance).plus(totalNet);
+        await supabase.from('profiles').update({
+          profits: newProfits.toNumber(),
+          balance: newBalance.toNumber(),
+        }).eq('user_id', userId);
+      }
+    }
+  }, []);
+
+  const loadUserData = useCallback(async (userId: string, doCatchUp = false) => {
     const [profileRes, investRes, depositRes, withdrawRes, commRes, profitRes, allProfilesRes] = await Promise.all([
       supabase.from('profiles').select('*').eq('user_id', userId).single(),
       supabase.from('investments').select('*').eq('user_id', userId),
@@ -97,12 +165,24 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
 
     if (!profileRes.data) return;
 
+    const investments = (investRes.data || []).map(dbInvestmentToInvestment);
+
+    // Catch up missed yields on first load (login)
+    if (doCatchUp) {
+      const activeInvs = investments.filter(i => i.status === 'active');
+      if (activeInvs.length > 0) {
+        await catchUpYields(userId, activeInvs);
+        // Reload fresh data after catch-up
+        return loadUserData(userId, false);
+      }
+    }
+
     const user = profileToUser(profileRes.data);
     const allUsers = (allProfilesRes.data || []).map(profileToUser);
 
     setState({
       user,
-      investments: (investRes.data || []).map(dbInvestmentToInvestment),
+      investments,
       deposits: (depositRes.data || []).map((d: any) => ({
         id: d.id,
         userId: d.user_id,
@@ -144,14 +224,14 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       allUsers,
       loading: false,
     });
-  }, []);
+  }, [catchUpYields]);
 
   // Listen for auth state changes
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        // Use setTimeout to avoid deadlock with Supabase auth
-        setTimeout(() => loadUserData(session.user.id), 0);
+        // Catch up yields on sign in / initial load
+        setTimeout(() => loadUserData(session.user.id, true), 0);
       } else {
         setState(prev => ({ ...prev, user: null, loading: false }));
       }
@@ -160,7 +240,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     // Check existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        loadUserData(session.user.id);
+        loadUserData(session.user.id, true);
       } else {
         setState(prev => ({ ...prev, loading: false }));
       }
