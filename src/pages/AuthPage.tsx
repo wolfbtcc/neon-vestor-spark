@@ -17,6 +17,7 @@ export default function AuthPage() {
   const [selectedCountry, setSelectedCountry] = useState(COUNTRIES[0]);
   const [showCountryList, setShowCountryList] = useState(false);
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const { login, register, user } = usePlatform();
@@ -35,7 +36,7 @@ export default function AuthPage() {
     if (submitting) return;
     if (!email.trim() || !password.trim()) { toast.error('Preencha todos os campos'); return; }
     if (password.length < 6) { toast.error('Senha deve ter no mínimo 6 caracteres'); return; }
-
+    if (!isLogin && password !== confirmPassword) { toast.error('As senhas não coincidem'); return; }
     setSubmitting(true);
     try {
       if (isLogin) {
@@ -167,6 +168,18 @@ export default function AuthPage() {
               {showPw ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
           </div>
+
+          {!isLogin && (
+            <div className="relative">
+              <input
+                type={showPw ? 'text' : 'password'}
+                placeholder="Confirmar senha"
+                value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)}
+                className="w-full px-4 py-3 pr-10 rounded-lg bg-muted border border-border focus:border-primary/50 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all text-sm"
+              />
+            </div>
+          )}
 
           {!isLogin && refCode && (
             <div className="text-xs text-primary bg-primary/10 rounded-lg px-3 py-2">
