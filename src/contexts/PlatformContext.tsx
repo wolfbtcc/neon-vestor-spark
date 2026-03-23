@@ -154,17 +154,15 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        // Catch up yields on sign in / initial load
-        setTimeout(() => loadUserData(session.user.id, true), 0);
+        setTimeout(() => loadUserData(session.user.id), 0);
       } else {
         setState(prev => ({ ...prev, user: null, loading: false }));
       }
     });
 
-    // Check existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session?.user) {
-        loadUserData(session.user.id, true);
+        loadUserData(session.user.id);
       } else {
         setState(prev => ({ ...prev, loading: false }));
       }
