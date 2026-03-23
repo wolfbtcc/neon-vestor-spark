@@ -83,10 +83,10 @@ Deno.serve(async (req) => {
       const effectiveNow = Math.min(now, endDate)
       const elapsedMs = effectiveNow - lastTime
 
-      // Need at least 30 seconds elapsed
-      if (elapsedMs < 30000) continue
+      // Need at least 5 minutes elapsed
+      if (elapsedMs < 300000) continue
 
-      const intervals = Math.floor(elapsedMs / 30000)
+      const intervals = Math.floor(elapsedMs / 300000)
       if (intervals <= 0) continue
 
       // Cap intervals to avoid generating too many rows at once
@@ -99,26 +99,26 @@ Deno.serve(async (req) => {
 
       const totalProfit = amount * (returnPct / 100)
       const durationSeconds = durationDays * 86400
-      const totalIntervals = durationSeconds / 30
-      const profitPer30s = totalProfit / totalIntervals
+      const totalIntervals = durationSeconds / 300
+      const profitPer5min = totalProfit / totalIntervals
 
-      const poolPer30s = profitPer30s * POOL_RATE
-      const netPer30s = profitPer30s - poolPer30s
+      const poolPer5min = profitPer5min * POOL_RATE
+      const netPer5min = profitPer5min - poolPer5min
 
       for (let i = 0; i < maxIntervals; i++) {
-        const entryTime = new Date(lastTime + (i + 1) * 30000).toISOString()
+        const entryTime = new Date(lastTime + (i + 1) * 300000).toISOString()
         allRows.push({
           user_id: inv.user_id,
-          amount: profitPer30s,
-          fee: poolPer30s,
-          net: netPer30s,
+          amount: profitPer5min,
+          fee: poolPer5min,
+          net: netPer5min,
           investment_id: inv.id,
           created_at: entryTime,
         })
       }
 
       // Accumulate net total for user profile update
-      const totalNet = netPer30s * maxIntervals
+      const totalNet = netPer5min * maxIntervals
       if (!userUpdates[inv.user_id]) userUpdates[inv.user_id] = 0
       userUpdates[inv.user_id] += totalNet
 
