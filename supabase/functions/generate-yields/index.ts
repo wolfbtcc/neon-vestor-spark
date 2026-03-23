@@ -35,6 +35,39 @@ Deno.serve(async (req) => {
     // Track net totals per user for batch profile updates
     const userUpdates: Record<string, number> = {}
 
+    // Batch: get the latest profit entry per investment in ONE query
+    const investmentIds = activeInvestments.map(i => i.id)
+    const { data: latestProfits } = await supabase
+      .rpc('get_latest_profit_times', { p_investment_ids: investmentIds })
+
+    // Fallback: if RPC doesn't exist, use individual queries
+    let lastTimeMap: Record<string, number> = {}
+
+    if (latestProfits && Array.isArray(latestProfits)) {
+      for (const lp of latestProfits) {
+        lastTimeMap[lp.investment_id] = new Date(lp.last_created_at).getTime()
+      }
+    } else {
+      // Fallback: single query to get all latest profits for these investments
+      const { data: allLastProfits } = await supabase
+        .from('profit_history')
+        .select('investment_id, created_at')
+        .in('investment_id', investmentIds)
+        .order('created_at', { ascending: false })
+
+      if (allLastProfits) {
+        // Keep only the latest per investment_id
+        for (const p of allLastProfits) {
+          if (!lastTimeMap[p.investment_id]) {
+            lastTimeMap[p.investment_id] = new Date(p.created_at).getTime()
+          }
+        }
+      }
+    }
+
+    // Collect all rows to insert in one batch
+    const allRows: any[] = []
+
     for (const inv of activeInvestments) {
       const endDate = new Date(inv.end_date).getTime()
       const startDate = new Date(inv.start_date).getTime()
@@ -44,17 +77,7 @@ Deno.serve(async (req) => {
         await supabase.from('investments').update({ status: 'completed' }).eq('id', inv.id)
       }
 
-      // Find last profit entry for this investment
-      const { data: lastProfit } = await supabase
-        .from('profit_history')
-        .select('created_at')
-        .eq('investment_id', inv.id)
-        .order('created_at', { ascending: false })
-        .limit(1)
-
-      const lastTime = lastProfit && lastProfit.length > 0
-        ? new Date(lastProfit[0].created_at).getTime()
-        : startDate
+      const lastTime = lastTimeMap[inv.id] || startDate
 
       // Calculate effective end time (don't generate past end date)
       const effectiveNow = Math.min(now, endDate)
@@ -66,10 +89,13 @@ Deno.serve(async (req) => {
       const intervals = Math.floor(elapsedMs / 30000)
       if (intervals <= 0) continue
 
+      // Cap intervals to avoid generating too many rows at once
+      const maxIntervals = Math.min(intervals, 120) // max 1 hour catch-up
+
       // Precise calculation per 30s interval
-      const amount = inv.amount
-      const returnPct = inv.return_percent
-      const durationDays = inv.duration_days
+      const amount = Number(inv.amount)
+      const returnPct = Number(inv.return_percent)
+      const durationDays = Number(inv.duration_days)
 
       const totalProfit = amount * (returnPct / 100)
       const durationSeconds = durationDays * 86400
@@ -79,11 +105,9 @@ Deno.serve(async (req) => {
       const poolPer30s = profitPer30s * POOL_RATE
       const netPer30s = profitPer30s - poolPer30s
 
-      // Create individual entries for each 30s interval
-      const rows = []
-      for (let i = 0; i < intervals; i++) {
+      for (let i = 0; i < maxIntervals; i++) {
         const entryTime = new Date(lastTime + (i + 1) * 30000).toISOString()
-        rows.push({
+        allRows.push({
           user_id: inv.user_id,
           amount: profitPer30s,
           fee: poolPer30s,
@@ -93,21 +117,21 @@ Deno.serve(async (req) => {
         })
       }
 
-      // Insert in batches of 50 to avoid payload limits
-      for (let i = 0; i < rows.length; i += 50) {
-        const batch = rows.slice(i, i + 50)
-        const { error: insertError } = await supabase.from('profit_history').insert(batch)
-        if (insertError) {
-          console.error(`Error inserting profit batch for investment ${inv.id}:`, insertError)
-        }
-      }
-
       // Accumulate net total for user profile update
-      const totalNet = netPer30s * intervals
+      const totalNet = netPer30s * maxIntervals
       if (!userUpdates[inv.user_id]) userUpdates[inv.user_id] = 0
       userUpdates[inv.user_id] += totalNet
 
-      totalProcessed += intervals
+      totalProcessed += maxIntervals
+    }
+
+    // Insert all rows in batches of 100
+    for (let i = 0; i < allRows.length; i += 100) {
+      const batch = allRows.slice(i, i + 100)
+      const { error: insertError } = await supabase.from('profit_history').insert(batch)
+      if (insertError) {
+        console.error(`Error inserting profit batch:`, insertError)
+      }
     }
 
     // Batch update user profiles
