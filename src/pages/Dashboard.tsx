@@ -111,7 +111,7 @@ export default function Dashboard() {
               )}
             </div>
             <button
-              onClick={() => { logout(); navigate('/'); }}
+              onClick={async () => { await logout(); navigate('/'); }}
               className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors active:scale-95"
             >
               <LogOut className="w-4 h-4" />
