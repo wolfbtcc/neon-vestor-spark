@@ -173,71 +173,10 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
 
   // 30-second yield generation
   useEffect(() => {
-    const interval = setInterval(async () => {
-      if (!state.user) return;
-      const activeInvs = state.investments.filter(i => i.userId === state.user!.id && i.status === 'active');
-      if (activeInvs.length === 0) return;
-
-      const now = Date.now();
-      let totalNet = new Decimal(0);
-
-      for (const inv of activeInvs) {
-        const amount = new Decimal(inv.amount);
-        const returnPct = new Decimal(inv.returnPercent);
-        const durationDays = new Decimal(inv.durationDays);
-
-        const totalProfit = amount.mul(returnPct).div(100);
-        const durationSeconds = durationDays.mul(86400);
-        const profitPer30s = totalProfit.div(durationSeconds.div(30));
-        const fee = profitPer30s.mul(POOL_FEE);
-        const net = profitPer30s.minus(fee);
-        totalNet = totalNet.plus(net);
-
-        // Insert profit entry with full precision
-        await supabase.from('profit_history').insert({
-          user_id: state.user!.id,
-          amount: profitPer30s.toNumber(),
-          fee: fee.toNumber(),
-          net: net.toNumber(),
-          investment_id: inv.id,
-        });
-      }
-
-      if (totalNet.gt(0)) {
-        const newProfits = new Decimal(state.user!.profits).plus(totalNet);
-        const newBalance = new Decimal(state.user!.balance).plus(totalNet);
-
-        await supabase.from('profiles').update({
-          profits: newProfits.toNumber(),
-          balance: newBalance.toNumber(),
-        }).eq('user_id', state.user!.id);
-
-        // Check completed cycles
-        for (const inv of activeInvs) {
-          if (now >= inv.endDate) {
-            await supabase.from('investments').update({ status: 'completed' }).eq('id', inv.id);
-          }
-        }
-
-        // Reload data
-        await loadUserData(state.user!.id);
-      }
-    }, 30000);
-    return () => clearInterval(interval);
-  }, [state.user, state.investments, loadUserData]);
-
-  // Auto-confirm withdrawals check every 30s
+  // Refresh data every 30s to pick up server-generated yields
   useEffect(() => {
     const interval = setInterval(async () => {
       if (!state.user) return;
-      await supabase.rpc('auto_confirm_withdrawals');
-      // Check completed cycles
-      const now = new Date().toISOString();
-      await supabase.from('investments')
-        .update({ status: 'completed' })
-        .eq('user_id', state.user.id)
-        .eq('status', 'active')
-        .lte('end_date', now);
       await loadUserData(state.user.id);
     }, 30000);
     return () => clearInterval(interval);
