@@ -117,7 +117,7 @@ export default function TeamPage() {
         {showWithdraw && (
           <div className="neon-card space-y-3">
             <p className="text-xs text-muted-foreground">Comissão disponível: <span className="font-mono-data text-neon-cyan">{formatBRL(totalEarnings)}</span></p>
-            <p className="text-[10px] text-muted-foreground">Disponível diariamente • Mínimo R$ 100</p>
+            <p className="text-[10px] text-muted-foreground">Disponível diariamente • Mín. $20</p>
             <div>
               <label className="text-[11px] tracking-widest text-muted-foreground mb-1 block uppercase">Nome Completo</label>
               <input type="text" value={pixName} onChange={e => setPixName(e.target.value)} placeholder="Seu nome completo"
