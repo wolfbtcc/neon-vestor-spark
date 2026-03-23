@@ -217,6 +217,13 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     const users = getAllUsers();
     if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) return false;
 
+    // Resolve referral code to user ID
+    let referredByUserId: string | null = null;
+    if (referralCode) {
+      const referrer = users.find(u => u.referralCode === referralCode);
+      if (referrer) referredByUserId = referrer.id;
+    }
+
     const newUser: User = {
       id: generateId(),
       name,
@@ -228,9 +235,9 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       invested: 0,
       profits: 0,
       referralCode: generateReferralCode(),
-      referredBy: referralCode || null,
+      referredBy: referredByUserId,
       createdAt: Date.now(),
-      isAdmin: users.length === 0, // first user is admin
+      isAdmin: users.length === 0,
     };
 
     users.push(newUser);
