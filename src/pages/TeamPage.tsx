@@ -131,8 +131,8 @@ export default function TeamPage() {
             <div>
               <label className="text-[11px] tracking-widest text-muted-foreground mb-1 block uppercase">Valor</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
-                <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Mínimo 100,00"
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Mínimo 20"
                   className="w-full pl-10 pr-4 py-3 rounded-xl bg-muted border border-border focus:border-neon-cyan/50 focus:outline-none focus:ring-1 focus:ring-neon-cyan/30 font-mono-data text-lg transition-all" />
               </div>
             </div>
