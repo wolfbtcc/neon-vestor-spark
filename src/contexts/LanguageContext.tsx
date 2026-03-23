@@ -98,7 +98,7 @@ const translations: Record<string, Record<Language, string>> = {
   'withdraw.name': { pt: 'Nome', en: 'Name', es: 'Nombre' },
   'withdraw.pix_key': { pt: 'Chave Pix', en: 'Pix Key', es: 'Clave Pix' },
   'withdraw.amount': { pt: 'Valor', en: 'Amount', es: 'Monto' },
-  'withdraw.min': { pt: 'Valor mínimo $100', en: 'Minimum value $100', es: 'Valor mínimo $100' },
+  'withdraw.min': { pt: 'Valor mínimo $20', en: 'Minimum value $20', es: 'Valor mínimo $20' },
   'withdraw.confirm': { pt: 'Confirmar Saque', en: 'Confirm Withdrawal', es: 'Confirmar Retiro' },
   'withdraw.method': { pt: 'Método', en: 'Method', es: 'Método' },
 

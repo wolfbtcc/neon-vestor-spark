@@ -62,7 +62,7 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
     if (!pixKey.trim()) { toast.error('Informe a chave PIX'); return; }
     const val = parseFloat(amount);
     if (isNaN(val) || val <= 0) { toast.error('Valor inválido'); return; }
-    if (val < 100) { toast.error('Valor mínimo para saque: R$ 100,00'); return; }
+    if (val < 20) { toast.error('Valor mínimo para saque: $20'); return; }
     if (val > user.profits) { toast.error('Saldo de lucros insuficiente'); return; }
     const success = await withdraw(val, pixName, pixKey, 'profits');
     if (success) {
@@ -123,7 +123,7 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-foreground">Sacar Lucros</p>
-                  <p className="text-[10px] text-muted-foreground">Disponível todos os dias • Mín. R$ 100</p>
+                  <p className="text-[10px] text-muted-foreground">Disponível todos os dias • Mín. $20</p>
                   <p className="text-xs font-mono-data text-neon-cyan mt-0.5">{formatBRL(user.profits)} disponível</p>
                 </div>
               </div>
@@ -199,8 +199,8 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
             <div>
               <label className="text-[11px] tracking-widest text-muted-foreground mb-1 block uppercase">Valor do Saque</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
-                <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Mínimo 100,00"
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Mínimo 20"
                   className="w-full pl-10 pr-4 py-3 rounded-xl bg-muted border border-border focus:border-neon-cyan/50 focus:outline-none focus:ring-1 focus:ring-neon-cyan/30 font-mono-data text-lg transition-all" />
               </div>
             </div>

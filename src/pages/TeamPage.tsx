@@ -47,7 +47,7 @@ export default function TeamPage() {
     if (!pixKey.trim()) { toast.error('Informe a chave PIX'); return; }
     const val = parseFloat(amount);
     if (isNaN(val) || val <= 0) { toast.error('Valor inválido'); return; }
-    if (val < 100) { toast.error('Valor mínimo para saque: R$ 100,00'); return; }
+    if (val < 20) { toast.error('Valor mínimo para saque: $20'); return; }
     if (val > totalEarnings) { toast.error('Saldo de comissão insuficiente'); return; }
     const success = await withdraw(val, pixName, pixKey, 'commission');
     if (success) {
@@ -117,7 +117,7 @@ export default function TeamPage() {
         {showWithdraw && (
           <div className="neon-card space-y-3">
             <p className="text-xs text-muted-foreground">Comissão disponível: <span className="font-mono-data text-neon-cyan">{formatBRL(totalEarnings)}</span></p>
-            <p className="text-[10px] text-muted-foreground">Disponível diariamente • Mínimo R$ 100</p>
+            <p className="text-[10px] text-muted-foreground">Disponível diariamente • Mín. $20</p>
             <div>
               <label className="text-[11px] tracking-widest text-muted-foreground mb-1 block uppercase">Nome Completo</label>
               <input type="text" value={pixName} onChange={e => setPixName(e.target.value)} placeholder="Seu nome completo"
@@ -131,8 +131,8 @@ export default function TeamPage() {
             <div>
               <label className="text-[11px] tracking-widest text-muted-foreground mb-1 block uppercase">Valor</label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">R$</span>
-                <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Mínimo 100,00"
+                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground text-sm">$</span>
+                <input type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Mínimo 20"
                   className="w-full pl-10 pr-4 py-3 rounded-xl bg-muted border border-border focus:border-neon-cyan/50 focus:outline-none focus:ring-1 focus:ring-neon-cyan/30 font-mono-data text-lg transition-all" />
               </div>
             </div>
