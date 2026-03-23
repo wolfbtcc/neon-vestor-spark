@@ -100,7 +100,7 @@ export default function Dashboard() {
                     </button>
                     <div className="border-t border-border" />
                     <button
-                      onClick={() => { setMenuOpen(false); logout(); navigate('/'); }}
+                      onClick={async () => { setMenuOpen(false); await logout(); navigate('/'); }}
                       className="w-full flex items-center gap-3 px-4 py-3 hover:bg-destructive/10 transition-colors text-left"
                     >
                       <LogOut className="w-4 h-4 text-destructive" />
@@ -111,7 +111,7 @@ export default function Dashboard() {
               )}
             </div>
             <button
-              onClick={() => { logout(); navigate('/'); }}
+              onClick={async () => { await logout(); navigate('/'); }}
               className="p-2 rounded-lg text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors active:scale-95"
             >
               <LogOut className="w-4 h-4" />
