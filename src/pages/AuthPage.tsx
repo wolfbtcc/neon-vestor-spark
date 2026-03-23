@@ -40,12 +40,12 @@ export default function AuthPage() {
     setSubmitting(true);
     try {
       if (isLogin) {
-        const success = await login(email, password);
-        if (success) {
+        const result = await login(email, password);
+        if (result.success) {
           toast.success('Login realizado!');
           navigate('/dashboard');
         } else {
-          toast.error('Credenciais inválidas');
+          toast.error(result.error || 'Credenciais inválidas');
         }
       } else {
         if (!name.trim()) { toast.error('Preencha o nome'); setSubmitting(false); return; }
@@ -56,12 +56,12 @@ export default function AuthPage() {
           return;
         }
         const fullPhone = `${selectedCountry.dial} ${phone}`;
-        const success = await register(name, email, password, refCode, fullPhone, selectedCountry.code);
-        if (success) {
+        const result = await register(name, email, password, refCode, fullPhone, selectedCountry.code);
+        if (result.success) {
           toast.success('Conta criada com sucesso!');
           navigate('/dashboard');
         } else {
-          toast.error('Email já cadastrado');
+          toast.error(result.error || 'Email já cadastrado');
         }
       }
     } catch (err) {
