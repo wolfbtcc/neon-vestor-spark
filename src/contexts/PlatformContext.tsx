@@ -273,6 +273,35 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     // Update user balance
     const user = { ...state.user, balance: state.user.balance + amount };
     updateUserInStorage(user);
+
+    // Generate commissions for referral chain (5 levels)
+    const allUsers = getAllUsers();
+    const allCommissions = getAllCommissions();
+    let currentUserId: string | null = user.referredBy;
+    for (let level = 0; level < COMMISSION_LEVELS.length && currentUserId; level++) {
+      const referrer = allUsers.find(u => u.id === currentUserId);
+      if (!referrer) break;
+
+      const commissionAmount = amount * (COMMISSION_LEVELS[level] / 100);
+      const commission: Commission = {
+        id: generateId(),
+        userId: referrer.id,
+        fromUserId: user.id,
+        fromUserName: user.name,
+        level: level + 1,
+        amount: commissionAmount,
+        createdAt: Date.now(),
+      };
+      allCommissions.push(commission);
+
+      // Credit commission to referrer's profits
+      referrer.profits += commissionAmount;
+      updateUserInStorage(referrer);
+
+      currentUserId = referrer.referredBy;
+    }
+    saveAllCommissions(allCommissions);
+
     loadUserData(user.id);
 
     return dep;
