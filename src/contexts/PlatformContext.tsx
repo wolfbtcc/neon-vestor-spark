@@ -166,21 +166,25 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       loading: false,
     }));
 
-    void supabase.from('profiles').select('*').then(({ data, error }) => {
-      if (error) {
-        console.error('Background profiles query error:', error);
-        return;
+    void (async () => {
+      try {
+        const { data, error } = await supabase.from('profiles').select('*');
+
+        if (error) {
+          console.error('Background profiles query error:', error);
+          return;
+        }
+
+        if (!data) return;
+
+        setState(prev => ({
+          ...prev,
+          allUsers: data.map(profileToUser),
+        }));
+      } catch (error) {
+        console.error('Background profiles request failed:', error);
       }
-
-      if (!data) return;
-
-      setState(prev => ({
-        ...prev,
-        allUsers: data.map(profileToUser),
-      }));
-    }).catch((error) => {
-      console.error('Background profiles request failed:', error);
-    });
+    })();
   }, []);
 
   // Listen for auth state changes
