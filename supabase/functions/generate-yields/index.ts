@@ -99,8 +99,8 @@ Deno.serve(async (req) => {
 
       const totalProfit = amount * (returnPct / 100)
       const durationSeconds = durationDays * 86400
-      const totalIntervals = durationSeconds / 30
-      const profitPer30s = totalProfit / totalIntervals
+      const totalIntervals = durationSeconds / 300
+      const profitPer5min = totalProfit / totalIntervals
 
       const poolPer30s = profitPer30s * POOL_RATE
       const netPer30s = profitPer30s - poolPer30s
