@@ -123,7 +123,7 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-foreground">Sacar Lucros</p>
-                  <p className="text-[10px] text-muted-foreground">Disponível todos os dias • Mín. R$ 100</p>
+                  <p className="text-[10px] text-muted-foreground">Disponível todos os dias • Mín. $20</p>
                   <p className="text-xs font-mono-data text-neon-cyan mt-0.5">{formatBRL(user.profits)} disponível</p>
                 </div>
               </div>
