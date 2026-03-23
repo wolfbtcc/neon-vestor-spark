@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import Decimal from 'decimal.js';
 import {
@@ -6,7 +6,6 @@ import {
   generatePixCode, generateWalletAddress,
   COMMISSION_LEVELS,
 } from '@/lib/platform';
-import type { Session } from '@supabase/supabase-js';
 
 interface PlatformState {
   user: User | null;
