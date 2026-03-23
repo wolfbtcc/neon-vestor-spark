@@ -83,10 +83,10 @@ Deno.serve(async (req) => {
       const effectiveNow = Math.min(now, endDate)
       const elapsedMs = effectiveNow - lastTime
 
-      // Need at least 30 seconds elapsed
-      if (elapsedMs < 30000) continue
+      // Need at least 5 minutes elapsed
+      if (elapsedMs < 300000) continue
 
-      const intervals = Math.floor(elapsedMs / 30000)
+      const intervals = Math.floor(elapsedMs / 300000)
       if (intervals <= 0) continue
 
       // Cap intervals to avoid generating too many rows at once
