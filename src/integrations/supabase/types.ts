@@ -247,13 +247,6 @@ export type Database = {
     }
     Functions: {
       auto_confirm_withdrawals: { Args: never; Returns: undefined }
-      get_latest_profit_times: {
-        Args: { p_investment_ids: string[] }
-        Returns: {
-          investment_id: string
-          last_created_at: string
-        }[]
-      }
       process_deposit: {
         Args: {
           p_amount: number

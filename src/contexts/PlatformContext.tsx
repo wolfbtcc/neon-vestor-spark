@@ -19,8 +19,8 @@ interface PlatformState {
 }
 
 interface PlatformContextType extends PlatformState {
-  login: (email: string, password: string) => Promise<{ success: boolean; error?: string }>;
-  register: (name: string, email: string, password: string, referralCode?: string, phone?: string, phoneCountry?: string) => Promise<{ success: boolean; error?: string }>;
+  login: (email: string, password: string) => Promise<boolean>;
+  register: (name: string, email: string, password: string, referralCode?: string, phone?: string, phoneCountry?: string) => Promise<boolean>;
   logout: () => void;
   deposit: (amount: number, method: 'pix' | 'usdt') => Promise<Deposit | null>;
   invest: (amount: number, durationDays: number, returnPercent: number) => Promise<boolean>;
@@ -71,17 +71,6 @@ function dbInvestmentToInvestment(i: any): Investment {
   };
 }
 
-const wait = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
-
-async function withTimeout<T>(promise: Promise<T>, timeoutMs: number, fallbackMessage: string): Promise<T> {
-  return await Promise.race([
-    promise,
-    new Promise<T>((_, reject) => {
-      setTimeout(() => reject(new Error(fallbackMessage)), timeoutMs);
-    }),
-  ]);
-}
-
 export function PlatformProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<PlatformState>({
     user: null,
@@ -96,34 +85,28 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
 
 
 
-  const loadUserCollections = useCallback(async (userId: string) => {
-    const requests = await Promise.allSettled([
+  const loadUserData = useCallback(async (userId: string) => {
+    const [profileRes, investRes, depositRes, withdrawRes, commRes, profitRes, allProfilesRes] = await Promise.all([
+      supabase.from('profiles').select('*').eq('user_id', userId).single(),
       supabase.from('investments').select('*').eq('user_id', userId),
       supabase.from('deposits').select('*').eq('user_id', userId),
       supabase.from('withdrawals').select('*').eq('user_id', userId),
       supabase.from('commissions').select('*').eq('user_id', userId),
-      supabase.from('profit_history').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(200),
+      supabase.from('profit_history').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+      supabase.from('profiles').select('*'),
     ]);
 
-    const [investRes, depositRes, withdrawRes, commRes, profitRes] = requests;
+    if (!profileRes.data) return;
 
-    const getPayload = <T,>(result: PromiseSettledResult<{ data: T; error: unknown }>): T | null => {
-      if (result.status === 'rejected') {
-        console.error('Load user data request failed:', result.reason);
-        return null;
-      }
+    const investments = (investRes.data || []).map(dbInvestmentToInvestment);
 
-      if (result.value.error) {
-        console.error('Load user data query error:', result.value.error);
-      }
+    const user = profileToUser(profileRes.data);
+    const allUsers = (allProfilesRes.data || []).map(profileToUser);
 
-      return result.value.data ?? null;
-    };
-
-    setState(prev => ({
-      ...prev,
-      investments: (getPayload<any[]>(investRes) || []).map(dbInvestmentToInvestment),
-      deposits: (getPayload<any[]>(depositRes) || []).map((d: any) => ({
+    setState({
+      user,
+      investments,
+      deposits: (depositRes.data || []).map((d: any) => ({
         id: d.id,
         userId: d.user_id,
         amount: Number(d.amount),
@@ -133,7 +116,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
         walletAddress: d.wallet_address || undefined,
         createdAt: new Date(d.created_at).getTime(),
       })),
-      withdrawals: (getPayload<any[]>(withdrawRes) || []).map((w: any) => ({
+      withdrawals: (withdrawRes.data || []).map((w: any) => ({
         id: w.id,
         userId: w.user_id,
         amount: Number(w.amount),
@@ -143,7 +126,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
         status: w.status as 'pending' | 'completed',
         createdAt: new Date(w.created_at).getTime(),
       })),
-      commissions: (getPayload<any[]>(commRes) || []).map((c: any) => ({
+      commissions: (commRes.data || []).map((c: any) => ({
         id: c.id,
         userId: c.user_id,
         fromUserId: c.from_user_id,
@@ -152,7 +135,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
         amount: Number(c.amount),
         createdAt: new Date(c.created_at).getTime(),
       })),
-      profitHistory: (getPayload<any[]>(profitRes) || []).map((p: any) => ({
+      profitHistory: (profitRes.data || []).map((p: any) => ({
         id: p.id,
         userId: p.user_id,
         amount: Number(p.amount),
@@ -161,245 +144,65 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
         investmentId: p.investment_id,
         createdAt: new Date(p.created_at).getTime(),
       })),
-    }));
+      allUsers,
+      loading: false,
+    });
   }, []);
-
-  const loadAllUsers = useCallback(async () => {
-    try {
-      const { data, error } = await supabase.from('profiles').select('*');
-
-      if (error) {
-        console.error('Background profiles query error:', error);
-        return;
-      }
-
-      if (!data) return;
-
-      setState(prev => ({
-        ...prev,
-        allUsers: data.map(profileToUser),
-      }));
-    } catch (error) {
-      console.error('Background profiles request failed:', error);
-    }
-  }, []);
-
-  const fetchProfile = useCallback(async (userId: string) => {
-    for (let attempt = 0; attempt < 3; attempt++) {
-      const { data, error } = await supabase.from('profiles').select('*').eq('user_id', userId).single();
-
-      if (data) return data;
-
-      if (error) {
-        console.error('Profile query error:', error);
-      }
-
-      if (attempt < 2) {
-        await wait(400);
-      }
-    }
-
-    return null;
-  }, []);
-
-  const clearLocalSession = useCallback(async () => {
-    try {
-      await supabase.auth.signOut({ scope: 'local' });
-    } catch (error) {
-      console.error('Local sign out cleanup failed:', error);
-    }
-  }, []);
-
-  const loadUserData = useCallback(async (userId: string) => {
-    setState(prev => ({ ...prev, loading: true }));
-
-    try {
-      const profileData = await fetchProfile(userId);
-
-      if (!profileData) {
-        setState(prev => ({
-          ...prev,
-          user: null,
-          investments: [],
-          deposits: [],
-          withdrawals: [],
-          commissions: [],
-          profitHistory: [],
-          allUsers: [],
-          loading: false,
-        }));
-        return;
-      }
-
-      const user = profileToUser(profileData);
-
-      setState(prev => ({
-        ...prev,
-        user,
-        loading: false,
-      }));
-
-      void loadUserCollections(userId);
-      void loadAllUsers();
-    } catch (error) {
-      console.error('Load user data failed:', error);
-      setState(prev => ({ ...prev, loading: false }));
-    }
-  }, [fetchProfile, loadAllUsers, loadUserCollections]);
 
   // Listen for auth state changes
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (session?.user) {
-        void loadUserData(session.user.id);
+        setTimeout(() => loadUserData(session.user.id), 0);
       } else {
-        setState(prev => ({
-          ...prev,
-          user: null,
-          investments: [],
-          deposits: [],
-          withdrawals: [],
-          commissions: [],
-          profitHistory: [],
-          allUsers: [],
-          loading: false,
-        }));
+        setState(prev => ({ ...prev, user: null, loading: false }));
       }
     });
 
-    supabase.auth.getSession()
-      .then(async ({ data: { session }, error }) => {
-        if (error) {
-          console.error('Get session error:', error);
-          await clearLocalSession();
-          setState(prev => ({ ...prev, loading: false }));
-          return;
-        }
-
-        if (session?.user) {
-          void loadUserData(session.user.id);
-        } else {
-          setState(prev => ({ ...prev, loading: false }));
-        }
-      })
-      .catch(async error => {
-        console.error('Get session request failed:', error);
-        await clearLocalSession();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        loadUserData(session.user.id);
+      } else {
         setState(prev => ({ ...prev, loading: false }));
-      });
+      }
+    });
 
     return () => subscription.unsubscribe();
-  }, [clearLocalSession, loadUserData]);
+  }, [loadUserData]);
 
   // Refresh data every 30s to pick up server-generated yields
   useEffect(() => {
     const interval = setInterval(async () => {
       if (!state.user) return;
       await loadUserData(state.user.id);
-    }, 300000);
+    }, 30000);
     return () => clearInterval(interval);
   }, [state.user, loadUserData]);
 
-  const login = useCallback(async (email: string, password: string): Promise<{ success: boolean; error?: string }> => {
-    setState(prev => ({ ...prev, loading: true }));
+  const login = useCallback(async (email: string, password: string): Promise<boolean> => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return !error;
+  }, []);
 
-    try {
-      await clearLocalSession();
-
-      const { data, error } = await withTimeout(
-        supabase.auth.signInWithPassword({ email, password }),
-        15000,
-        'O login demorou demais para responder. Tente novamente.'
-      );
-
-      if (error) {
-        setState(prev => ({ ...prev, loading: false }));
-        return { success: false, error: error.message };
-      }
-
-      if (data.user) {
-        void loadUserData(data.user.id);
-        return { success: true };
-      }
-
-      setState(prev => ({ ...prev, loading: false }));
-      return { success: false, error: 'Não foi possível iniciar a sessão.' };
-    } catch (error) {
-      setState(prev => ({ ...prev, loading: false }));
-      return { success: false, error: error instanceof Error ? error.message : 'Erro inesperado no login.' };
-    }
-  }, [clearLocalSession, loadUserData]);
-
-  const register = useCallback(async (name: string, email: string, password: string, referralCode?: string, phone?: string, phoneCountry?: string): Promise<{ success: boolean; error?: string }> => {
-    setState(prev => ({ ...prev, loading: true }));
-
-    try {
-      await clearLocalSession();
-
-      const { data, error } = await withTimeout(
-        supabase.auth.signUp({
-          email,
-          password,
-          options: {
-            data: {
-              name,
-              phone: phone || '',
-              phone_country: phoneCountry || 'BR',
-              referred_by_code: referralCode || '',
-            },
-          },
-        }),
-        15000,
-        'O cadastro demorou demais para responder. Tente novamente.'
-      );
-
-      if (error) {
-        setState(prev => ({ ...prev, loading: false }));
-        return { success: false, error: error.message };
-      }
-
-      if (data.session?.user) {
-        void loadUserData(data.session.user.id);
-        return { success: true };
-      }
-
-      const loginResult = await withTimeout(
-        supabase.auth.signInWithPassword({ email, password }),
-        15000,
-        'A conta foi criada, mas o login automático demorou demais.'
-      );
-
-      if (loginResult.error) {
-        setState(prev => ({ ...prev, loading: false }));
-        return { success: false, error: loginResult.error.message };
-      }
-
-      if (loginResult.data.user) {
-        void loadUserData(loginResult.data.user.id);
-        return { success: true };
-      }
-
-      setState(prev => ({ ...prev, loading: false }));
-      return { success: false, error: 'Conta criada, mas não foi possível entrar automaticamente.' };
-    } catch (error) {
-      setState(prev => ({ ...prev, loading: false }));
-      return { success: false, error: error instanceof Error ? error.message : 'Erro inesperado no cadastro.' };
-    }
-  }, [clearLocalSession, loadUserData]);
+  const register = useCallback(async (name: string, email: string, password: string, referralCode?: string, phone?: string, phoneCountry?: string): Promise<boolean> => {
+    const { error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name,
+          phone: phone || '',
+          phone_country: phoneCountry || 'BR',
+          referred_by_code: referralCode || '',
+        },
+      },
+    });
+    return !error;
+  }, []);
 
   const logout = useCallback(async () => {
-    await supabase.auth.signOut({ scope: 'local' });
-    setState(prev => ({
-      ...prev,
-      user: null,
-      investments: [],
-      deposits: [],
-      withdrawals: [],
-      commissions: [],
-      profitHistory: [],
-      allUsers: [],
-      loading: false,
-    }));
+    await supabase.auth.signOut();
+    setState(prev => ({ ...prev, user: null }));
   }, []);
 
   const depositFn = useCallback(async (amount: number, method: 'pix' | 'usdt'): Promise<Deposit | null> => {
