@@ -32,8 +32,8 @@ Deno.serve(async (req) => {
     const POOL_RATE = 0.15
     let totalProcessed = 0
 
-    // Group investments by user for batch updates
-    const userUpdates: Record<string, { netTotal: number; completedIds: string[] }> = {}
+    // Track net totals per user for batch profile updates
+    const userUpdates: Record<string, number> = {}
 
     for (const inv of activeInvestments) {
       const endDate = new Date(inv.end_date).getTime()
@@ -41,10 +41,7 @@ Deno.serve(async (req) => {
 
       // Check if investment has ended
       if (now >= endDate) {
-        // Mark as completed
         await supabase.from('investments').update({ status: 'completed' }).eq('id', inv.id)
-        if (!userUpdates[inv.user_id]) userUpdates[inv.user_id] = { netTotal: 0, completedIds: [] }
-        userUpdates[inv.user_id].completedIds.push(inv.id)
       }
 
       // Find last profit entry for this investment
@@ -69,42 +66,53 @@ Deno.serve(async (req) => {
       const intervals = Math.floor(elapsedMs / 30000)
       if (intervals <= 0) continue
 
-      // High precision calculation
+      // Precise calculation per 30s interval
       const amount = inv.amount
       const returnPct = inv.return_percent
       const durationDays = inv.duration_days
 
       const totalProfit = amount * (returnPct / 100)
       const durationSeconds = durationDays * 86400
-      const profitPer30s = totalProfit / (durationSeconds / 30)
+      const totalIntervals = durationSeconds / 30
+      const profitPer30s = totalProfit / totalIntervals
 
-      const totalBruto = profitPer30s * intervals
-      const fee = totalBruto * POOL_RATE
-      const net = totalBruto - fee
+      const poolPer30s = profitPer30s * POOL_RATE
+      const netPer30s = profitPer30s - poolPer30s
 
-      // Insert aggregated profit entry
-      const { error: insertError } = await supabase.from('profit_history').insert({
-        user_id: inv.user_id,
-        amount: totalBruto,
-        fee: fee,
-        net: net,
-        investment_id: inv.id,
-      })
-
-      if (insertError) {
-        console.error(`Error inserting profit for investment ${inv.id}:`, insertError)
-        continue
+      // Create individual entries for each 30s interval
+      const rows = []
+      for (let i = 0; i < intervals; i++) {
+        const entryTime = new Date(lastTime + (i + 1) * 30000).toISOString()
+        rows.push({
+          user_id: inv.user_id,
+          amount: profitPer30s,
+          fee: poolPer30s,
+          net: netPer30s,
+          investment_id: inv.id,
+          created_at: entryTime,
+        })
       }
 
-      if (!userUpdates[inv.user_id]) userUpdates[inv.user_id] = { netTotal: 0, completedIds: [] }
-      userUpdates[inv.user_id].netTotal += net
+      // Insert in batches of 50 to avoid payload limits
+      for (let i = 0; i < rows.length; i += 50) {
+        const batch = rows.slice(i, i + 50)
+        const { error: insertError } = await supabase.from('profit_history').insert(batch)
+        if (insertError) {
+          console.error(`Error inserting profit batch for investment ${inv.id}:`, insertError)
+        }
+      }
 
-      totalProcessed++
+      // Accumulate net total for user profile update
+      const totalNet = netPer30s * intervals
+      if (!userUpdates[inv.user_id]) userUpdates[inv.user_id] = 0
+      userUpdates[inv.user_id] += totalNet
+
+      totalProcessed += intervals
     }
 
     // Batch update user profiles
-    for (const [userId, update] of Object.entries(userUpdates)) {
-      if (update.netTotal > 0) {
+    for (const [userId, netTotal] of Object.entries(userUpdates)) {
+      if (netTotal > 0) {
         const { data: profile } = await supabase
           .from('profiles')
           .select('profits, balance')
@@ -113,8 +121,8 @@ Deno.serve(async (req) => {
 
         if (profile) {
           await supabase.from('profiles').update({
-            profits: profile.profits + update.netTotal,
-            balance: profile.balance + update.netTotal,
+            profits: profile.profits + netTotal,
+            balance: profile.balance + netTotal,
           }).eq('user_id', userId)
         }
       }
