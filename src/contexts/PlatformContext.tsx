@@ -86,7 +86,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
 
 
 
-  const loadUserData = useCallback(async (userId: string, doCatchUp = false) => {
+  const loadUserData = useCallback(async (userId: string) => {
     const [profileRes, investRes, depositRes, withdrawRes, commRes, profitRes, allProfilesRes] = await Promise.all([
       supabase.from('profiles').select('*').eq('user_id', userId).single(),
       supabase.from('investments').select('*').eq('user_id', userId),
@@ -100,16 +100,6 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     if (!profileRes.data) return;
 
     const investments = (investRes.data || []).map(dbInvestmentToInvestment);
-
-    // Catch up missed yields on first load (login)
-    if (doCatchUp) {
-      const activeInvs = investments.filter(i => i.status === 'active');
-      if (activeInvs.length > 0) {
-        await catchUpYields(userId, activeInvs);
-        // Reload fresh data after catch-up
-        return loadUserData(userId, false);
-      }
-    }
 
     const user = profileToUser(profileRes.data);
     const allUsers = (allProfilesRes.data || []).map(profileToUser);
@@ -158,7 +148,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       allUsers,
       loading: false,
     });
-  }, [catchUpYields]);
+  }, []);
 
   // Listen for auth state changes
   useEffect(() => {
