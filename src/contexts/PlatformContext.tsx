@@ -175,7 +175,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     const interval = setInterval(async () => {
       if (!state.user) return;
       await loadUserData(state.user.id);
-    }, 30000);
+    }, 300000);
     return () => clearInterval(interval);
   }, [state.user, loadUserData]);
 

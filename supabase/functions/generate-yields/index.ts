@@ -118,7 +118,7 @@ Deno.serve(async (req) => {
       }
 
       // Accumulate net total for user profile update
-      const totalNet = netPer30s * maxIntervals
+      const totalNet = netPer5min * maxIntervals
       if (!userUpdates[inv.user_id]) userUpdates[inv.user_id] = 0
       userUpdates[inv.user_id] += totalNet
 
