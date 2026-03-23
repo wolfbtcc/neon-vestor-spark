@@ -86,27 +86,46 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
 
 
   const loadUserData = useCallback(async (userId: string) => {
-    const [profileRes, investRes, depositRes, withdrawRes, commRes, profitRes, allProfilesRes] = await Promise.all([
+    setState(prev => ({ ...prev, loading: true }));
+
+    const requests = await Promise.allSettled([
       supabase.from('profiles').select('*').eq('user_id', userId).single(),
       supabase.from('investments').select('*').eq('user_id', userId),
       supabase.from('deposits').select('*').eq('user_id', userId),
       supabase.from('withdrawals').select('*').eq('user_id', userId),
       supabase.from('commissions').select('*').eq('user_id', userId),
-      supabase.from('profit_history').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
-      supabase.from('profiles').select('*'),
+      supabase.from('profit_history').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(200),
     ]);
 
-    if (!profileRes.data) return;
+    const [profileRes, investRes, depositRes, withdrawRes, commRes, profitRes] = requests;
 
-    const investments = (investRes.data || []).map(dbInvestmentToInvestment);
+    const getPayload = <T,>(result: PromiseSettledResult<{ data: T; error: unknown }>): T | null => {
+      if (result.status === 'rejected') {
+        console.error('Load user data request failed:', result.reason);
+        return null;
+      }
 
-    const user = profileToUser(profileRes.data);
-    const allUsers = (allProfilesRes.data || []).map(profileToUser);
+      if (result.value.error) {
+        console.error('Load user data query error:', result.value.error);
+      }
 
-    setState({
+      return result.value.data ?? null;
+    };
+
+    const profileData = getPayload<any>(profileRes);
+
+    if (!profileData) {
+      setState(prev => ({ ...prev, user: null, loading: false }));
+      return;
+    }
+
+    const user = profileToUser(profileData);
+
+    setState(prev => ({
+      ...prev,
       user,
-      investments,
-      deposits: (depositRes.data || []).map((d: any) => ({
+      investments: (getPayload<any[]>(investRes) || []).map(dbInvestmentToInvestment),
+      deposits: (getPayload<any[]>(depositRes) || []).map((d: any) => ({
         id: d.id,
         userId: d.user_id,
         amount: Number(d.amount),
@@ -116,7 +135,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
         walletAddress: d.wallet_address || undefined,
         createdAt: new Date(d.created_at).getTime(),
       })),
-      withdrawals: (withdrawRes.data || []).map((w: any) => ({
+      withdrawals: (getPayload<any[]>(withdrawRes) || []).map((w: any) => ({
         id: w.id,
         userId: w.user_id,
         amount: Number(w.amount),
@@ -126,7 +145,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
         status: w.status as 'pending' | 'completed',
         createdAt: new Date(w.created_at).getTime(),
       })),
-      commissions: (commRes.data || []).map((c: any) => ({
+      commissions: (getPayload<any[]>(commRes) || []).map((c: any) => ({
         id: c.id,
         userId: c.user_id,
         fromUserId: c.from_user_id,
@@ -135,7 +154,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
         amount: Number(c.amount),
         createdAt: new Date(c.created_at).getTime(),
       })),
-      profitHistory: (profitRes.data || []).map((p: any) => ({
+      profitHistory: (getPayload<any[]>(profitRes) || []).map((p: any) => ({
         id: p.id,
         userId: p.user_id,
         amount: Number(p.amount),
@@ -144,8 +163,23 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
         investmentId: p.investment_id,
         createdAt: new Date(p.created_at).getTime(),
       })),
-      allUsers,
       loading: false,
+    }));
+
+    void supabase.from('profiles').select('*').then(({ data, error }) => {
+      if (error) {
+        console.error('Background profiles query error:', error);
+        return;
+      }
+
+      if (!data) return;
+
+      setState(prev => ({
+        ...prev,
+        allUsers: data.map(profileToUser),
+      }));
+    }).catch((error) => {
+      console.error('Background profiles request failed:', error);
     });
   }, []);
 
