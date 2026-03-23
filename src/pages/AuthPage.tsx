@@ -39,8 +39,12 @@ export default function AuthPage() {
     if (!isLogin && password !== confirmPassword) { toast.error('As senhas não coincidem'); return; }
     setSubmitting(true);
     try {
+      const timeoutPromise = new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('timeout')), 15000)
+      );
+
       if (isLogin) {
-        const success = await login(email, password);
+        const success = await Promise.race([login(email, password), timeoutPromise]);
         if (success) {
           toast.success('Login realizado!');
           navigate('/dashboard');
@@ -56,7 +60,7 @@ export default function AuthPage() {
           return;
         }
         const fullPhone = `${selectedCountry.dial} ${phone}`;
-        const success = await register(name, email, password, refCode, fullPhone, selectedCountry.code);
+        const success = await Promise.race([register(name, email, password, refCode, fullPhone, selectedCountry.code), timeoutPromise]);
         if (success) {
           toast.success('Conta criada com sucesso!');
           navigate('/dashboard');
@@ -64,8 +68,12 @@ export default function AuthPage() {
           toast.error('Email já cadastrado');
         }
       }
-    } catch (err) {
-      toast.error('Erro ao processar. Tente novamente.');
+    } catch (err: any) {
+      if (err?.message === 'timeout') {
+        toast.error('Servidor temporariamente indisponível. Tente novamente em instantes.');
+      } else {
+        toast.error('Erro ao processar. Tente novamente.');
+      }
     } finally {
       setSubmitting(false);
     }
