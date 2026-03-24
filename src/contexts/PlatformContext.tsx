@@ -77,15 +77,18 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     }
   }, []);
 
-  const loadUserData = useCallback(async (userId: string) => {
+  const loadUserData = useCallback(async (userId: string, retries = 3) => {
     try {
-      await ensureProfile(userId);
-
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .maybeSingle();
+      let profile = null;
+      for (let i = 0; i < retries; i++) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', userId)
+          .maybeSingle();
+        if (data) { profile = data; break; }
+        if (i < retries - 1) await new Promise(r => setTimeout(r, 600));
+      }
 
       if (!profile) {
         setState(prev => ({ ...prev, loading: false }));
