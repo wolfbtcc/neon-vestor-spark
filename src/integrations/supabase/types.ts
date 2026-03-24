@@ -14,7 +14,231 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      commissions: {
+        Row: {
+          amount: number
+          created_at: string
+          deposit_id: string | null
+          from_user_id: string
+          from_user_name: string | null
+          id: string
+          level: number
+          percentage: number
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          deposit_id?: string | null
+          from_user_id: string
+          from_user_name?: string | null
+          id?: string
+          level: number
+          percentage?: number
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          deposit_id?: string | null
+          from_user_id?: string
+          from_user_name?: string | null
+          id?: string
+          level?: number
+          percentage?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      deposits: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          method: string
+          pix_code: string | null
+          status: string
+          user_id: string
+          wallet_address: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          method: string
+          pix_code?: string | null
+          status?: string
+          user_id: string
+          wallet_address?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          method?: string
+          pix_code?: string | null
+          status?: string
+          user_id?: string
+          wallet_address?: string | null
+        }
+        Relationships: []
+      }
+      investments: {
+        Row: {
+          amount: number
+          created_at: string
+          cycle_number: number
+          duration_days: number
+          end_date: string
+          id: string
+          profit: number
+          return_percent: number
+          start_date: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          cycle_number?: number
+          duration_days: number
+          end_date: string
+          id?: string
+          profit?: number
+          return_percent: number
+          start_date?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          cycle_number?: number
+          duration_days?: number
+          end_date?: string
+          id?: string
+          profit?: number
+          return_percent?: number
+          start_date?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          balance: number
+          created_at: string
+          email: string
+          id: string
+          invested: number
+          is_admin: boolean | null
+          name: string
+          phone: string | null
+          phone_country: string | null
+          profits: number
+          referral_code: string | null
+          referred_by: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          email?: string
+          id?: string
+          invested?: number
+          is_admin?: boolean | null
+          name?: string
+          phone?: string | null
+          phone_country?: string | null
+          profits?: number
+          referral_code?: string | null
+          referred_by?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          email?: string
+          id?: string
+          invested?: number
+          is_admin?: boolean | null
+          name?: string
+          phone?: string | null
+          phone_country?: string | null
+          profits?: number
+          referral_code?: string | null
+          referred_by?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profit_history: {
+        Row: {
+          amount: number
+          created_at: string
+          fee: number
+          id: string
+          investment_id: string | null
+          net: number
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          fee?: number
+          id?: string
+          investment_id?: string | null
+          net?: number
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          fee?: number
+          id?: string
+          investment_id?: string | null
+          net?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      withdrawals: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          pix_key: string | null
+          pix_name: string | null
+          status: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          pix_key?: string | null
+          pix_name?: string | null
+          status?: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          pix_key?: string | null
+          pix_name?: string | null
+          status?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
