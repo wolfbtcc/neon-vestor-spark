@@ -170,12 +170,12 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, [loadUserData]);
 
-  // Refresh data every 30s to pick up server-generated yields
+  // Refresh data every 60s to pick up server-generated yields
   useEffect(() => {
     const interval = setInterval(async () => {
       if (!state.user) return;
       await loadUserData(state.user.id);
-    }, 30000);
+    }, 60000);
     return () => clearInterval(interval);
   }, [state.user, loadUserData]);
 

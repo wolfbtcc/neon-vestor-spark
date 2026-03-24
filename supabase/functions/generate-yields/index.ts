@@ -60,34 +60,34 @@ Deno.serve(async (req) => {
       const effectiveNow = Math.min(now, endDate)
       const elapsedMs = effectiveNow - lastTime
 
-      // Need at least 30 seconds elapsed
-      if (elapsedMs < 30000) continue
+      // Need at least 60 seconds elapsed
+      if (elapsedMs < 60000) continue
 
-      const intervals = Math.floor(elapsedMs / 30000)
+      const intervals = Math.floor(elapsedMs / 60000)
       if (intervals <= 0) continue
 
-      // Precise calculation per 30s interval
+      // Precise calculation per 60s interval
       const amount = inv.amount
       const returnPct = inv.return_percent
       const durationDays = inv.duration_days
 
       const totalProfit = amount * (returnPct / 100)
       const durationSeconds = durationDays * 86400
-      const totalIntervals = durationSeconds / 30
-      const profitPer30s = totalProfit / totalIntervals
+      const totalIntervals = durationSeconds / 60
+      const profitPerInterval = totalProfit / totalIntervals
 
-      const poolPer30s = profitPer30s * POOL_RATE
-      const netPer30s = profitPer30s - poolPer30s
+      const poolPerInterval = profitPerInterval * POOL_RATE
+      const netPerInterval = profitPerInterval - poolPerInterval
 
-      // Create individual entries for each 30s interval
+      // Create individual entries for each 60s interval
       const rows = []
       for (let i = 0; i < intervals; i++) {
-        const entryTime = new Date(lastTime + (i + 1) * 30000).toISOString()
+        const entryTime = new Date(lastTime + (i + 1) * 60000).toISOString()
         rows.push({
           user_id: inv.user_id,
-          amount: profitPer30s,
-          fee: poolPer30s,
-          net: netPer30s,
+          amount: profitPerInterval,
+          fee: poolPerInterval,
+          net: netPerInterval,
           investment_id: inv.id,
           created_at: entryTime,
         })
@@ -103,7 +103,7 @@ Deno.serve(async (req) => {
       }
 
       // Accumulate net total for user profile update
-      const totalNet = netPer30s * intervals
+      const totalNet = netPerInterval * intervals
       if (!userUpdates[inv.user_id]) userUpdates[inv.user_id] = 0
       userUpdates[inv.user_id] += totalNet
 
