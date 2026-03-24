@@ -18,34 +18,28 @@ export type Database = {
         Row: {
           amount: number
           created_at: string
-          deposit_id: string | null
           from_user_id: string
-          from_user_name: string | null
+          from_user_name: string
           id: string
           level: number
-          percentage: number
           user_id: string
         }
         Insert: {
           amount: number
           created_at?: string
-          deposit_id?: string | null
           from_user_id: string
-          from_user_name?: string | null
+          from_user_name?: string
           id?: string
           level: number
-          percentage?: number
           user_id: string
         }
         Update: {
           amount?: number
           created_at?: string
-          deposit_id?: string | null
           from_user_id?: string
-          from_user_name?: string | null
+          from_user_name?: string
           id?: string
           level?: number
-          percentage?: number
           user_id?: string
         }
         Relationships: []
@@ -132,12 +126,12 @@ export type Database = {
           email: string
           id: string
           invested: number
-          is_admin: boolean | null
+          is_admin: boolean
           name: string
-          phone: string | null
-          phone_country: string | null
+          phone: string
+          phone_country: string
           profits: number
-          referral_code: string | null
+          referral_code: string
           referred_by: string | null
           updated_at: string
           user_id: string
@@ -148,12 +142,12 @@ export type Database = {
           email?: string
           id?: string
           invested?: number
-          is_admin?: boolean | null
+          is_admin?: boolean
           name?: string
-          phone?: string | null
-          phone_country?: string | null
+          phone?: string
+          phone_country?: string
           profits?: number
-          referral_code?: string | null
+          referral_code: string
           referred_by?: string | null
           updated_at?: string
           user_id: string
@@ -164,12 +158,12 @@ export type Database = {
           email?: string
           id?: string
           invested?: number
-          is_admin?: boolean | null
+          is_admin?: boolean
           name?: string
-          phone?: string | null
-          phone_country?: string | null
+          phone?: string
+          phone_country?: string
           profits?: number
-          referral_code?: string | null
+          referral_code?: string
           referred_by?: string | null
           updated_at?: string
           user_id?: string
@@ -204,15 +198,23 @@ export type Database = {
           net?: number
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "profit_history_investment_id_fkey"
+            columns: ["investment_id"]
+            isOneToOne: false
+            referencedRelation: "investments"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       withdrawals: {
         Row: {
           amount: number
           created_at: string
           id: string
-          pix_key: string | null
-          pix_name: string | null
+          pix_key: string
+          pix_name: string
           status: string
           type: string
           user_id: string
@@ -221,8 +223,8 @@ export type Database = {
           amount: number
           created_at?: string
           id?: string
-          pix_key?: string | null
-          pix_name?: string | null
+          pix_key?: string
+          pix_name?: string
           status?: string
           type?: string
           user_id: string
@@ -231,8 +233,8 @@ export type Database = {
           amount?: number
           created_at?: string
           id?: string
-          pix_key?: string | null
-          pix_name?: string | null
+          pix_key?: string
+          pix_name?: string
           status?: string
           type?: string
           user_id?: string
@@ -244,85 +246,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      admin_update_balance: {
-        Args: { p_amount: number; p_target_user_id: string }
-        Returns: undefined
-      }
       auto_confirm_withdrawals: { Args: never; Returns: undefined }
-      ensure_profile_for_current_user: {
-        Args: {
-          p_name?: string
-          p_phone?: string
-          p_phone_country?: string
-          p_referred_by_code?: string
-        }
-        Returns: {
-          balance: number
-          created_at: string
-          email: string
-          id: string
-          invested: number
-          is_admin: boolean | null
-          name: string
-          phone: string | null
-          phone_country: string | null
-          profits: number
-          referral_code: string | null
-          referred_by: string | null
-          updated_at: string
-          user_id: string
-        }
-        SetofOptions: {
-          from: "*"
-          to: "profiles"
-          isOneToOne: true
-          isSetofReturn: false
-        }
-      }
-      get_all_profiles_admin: {
-        Args: never
-        Returns: {
-          balance: number
-          created_at: string
-          email: string
-          id: string
-          invested: number
-          is_admin: boolean | null
-          name: string
-          phone: string | null
-          phone_country: string | null
-          profits: number
-          referral_code: string | null
-          referred_by: string | null
-          updated_at: string
-          user_id: string
-        }[]
-        SetofOptions: {
-          from: "*"
-          to: "profiles"
-          isOneToOne: false
-          isSetofReturn: true
-        }
-      }
-      get_latest_profit_times: {
-        Args: { p_investment_ids: string[] }
-        Returns: {
-          investment_id: string
-          last_created_at: string
-        }[]
-      }
-      get_team_members: {
-        Args: never
-        Returns: {
-          member_created_at: string
-          member_email: string
-          member_level: number
-          member_name: string
-          member_phone: string
-          member_referral_code: string
-          member_user_id: string
-        }[]
-      }
       process_deposit: {
         Args: {
           p_amount: number
@@ -338,29 +262,6 @@ export type Database = {
           p_investment_id: string
           p_pix_key?: string
           p_pix_name?: string
-          p_user_id: string
-        }
-        Returns: string
-      }
-      process_invest: {
-        Args: {
-          p_amount: number
-          p_duration_days: number
-          p_return_percent: number
-          p_user_id: string
-        }
-        Returns: string
-      }
-      process_redeem: {
-        Args: { p_investment_id: string; p_user_id: string }
-        Returns: undefined
-      }
-      process_withdraw: {
-        Args: {
-          p_amount: number
-          p_pix_key?: string
-          p_pix_name?: string
-          p_type?: string
           p_user_id: string
         }
         Returns: string

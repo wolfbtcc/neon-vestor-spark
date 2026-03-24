@@ -1,18 +1,4 @@
 export function formatBRL(value: number): string {
-  const abs = Math.abs(value);
-  if (abs === 0) {
-    return '$0.00';
-  }
-  if (abs < 0.01) {
-    // Show up to 6 decimal places for very small values, trim trailing zeros
-    const formatted = abs.toFixed(6).replace(/0+$/, '').replace(/\.$/, '');
-    return `${value < 0 ? '-' : ''}$${formatted}`;
-  }
-  if (abs < 1) {
-    // Show up to 4 decimal places for small values
-    const formatted = abs.toFixed(4).replace(/0+$/, '').replace(/\.$/, '');
-    return `${value < 0 ? '-' : ''}$${formatted}`;
-  }
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',

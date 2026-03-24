@@ -11,6 +11,7 @@ export default function ProfitHistory() {
   if (!user) return null;
 
   const userProfits = profitHistory
+    .filter(p => p.userId === user.id)
     .sort((a, b) => b.createdAt - a.createdAt);
 
   return (
