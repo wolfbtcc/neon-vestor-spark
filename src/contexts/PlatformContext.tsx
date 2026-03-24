@@ -60,17 +60,15 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
 
   const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const currentUserIdRef = useRef<string | null>(null);
+  const authActionInProgress = useRef(false);
 
-  const ensureProfile = useCallback(async (fallbackUserId?: string) => {
+  const ensureProfile = useCallback(async (metadata?: { name?: string; phone?: string; phone_country?: string; referred_by_code?: string }) => {
     try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser || (fallbackUserId && authUser.id !== fallbackUserId)) return;
-
       await supabase.rpc('ensure_profile_for_current_user', {
-        p_name: authUser.user_metadata?.name ?? null,
-        p_phone: authUser.user_metadata?.phone ?? null,
-        p_phone_country: authUser.user_metadata?.phone_country ?? null,
-        p_referred_by_code: authUser.user_metadata?.referred_by_code ?? null,
+        p_name: metadata?.name ?? null,
+        p_phone: metadata?.phone ?? null,
+        p_phone_country: metadata?.phone_country ?? null,
+        p_referred_by_code: metadata?.referred_by_code ?? null,
       });
     } catch (err) {
       console.error('Error ensuring profile:', err);
@@ -235,7 +233,9 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         currentUserIdRef.current = session.user.id;
+        if (authActionInProgress.current) return;
         setState(prev => ({ ...prev, loading: true }));
+        await ensureProfile(session.user.user_metadata);
         await loadUserData(session.user.id);
       } else {
         currentUserIdRef.current = null;
@@ -258,6 +258,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       if (session?.user) {
         currentUserIdRef.current = session.user.id;
         setState(prev => ({ ...prev, loading: true }));
+        await ensureProfile(session.user.user_metadata);
         await loadUserData(session.user.id);
       } else {
         setState(prev => ({ ...prev, loading: false }));
@@ -265,7 +266,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [loadUserData]);
+  }, [loadUserData, ensureProfile]);
 
   useEffect(() => {
     if (state.user) {
@@ -283,29 +284,40 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
   }, [state.user?.id, loadUserData]);
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
-    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-    if (error || !data.user) return false;
-    await loadUserData(data.user.id);
-    return true;
-  }, [loadUserData]);
+    authActionInProgress.current = true;
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error || !data.user) return false;
+      await ensureProfile();
+      await loadUserData(data.user.id);
+      return true;
+    } finally {
+      authActionInProgress.current = false;
+    }
+  }, [ensureProfile, loadUserData]);
 
   const register = useCallback(async (name: string, email: string, password: string, referralCode?: string, phone?: string, phoneCountry?: string): Promise<boolean> => {
-    const { data, error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          name,
-          phone: phone || '',
-          phone_country: phoneCountry || 'BR',
-          referred_by_code: referralCode || undefined,
+    authActionInProgress.current = true;
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+            phone: phone || '',
+            phone_country: phoneCountry || 'BR',
+            referred_by_code: referralCode || undefined,
+          },
         },
-      },
-    });
-    if (error || !data.user) return false;
-    await ensureProfile(data.user.id);
-    await loadUserData(data.user.id);
-    return true;
+      });
+      if (error || !data.user) return false;
+      await ensureProfile({ name, phone: phone || '', phone_country: phoneCountry || 'BR', referred_by_code: referralCode || '' });
+      await loadUserData(data.user.id);
+      return true;
+    } finally {
+      authActionInProgress.current = false;
+    }
   }, [ensureProfile, loadUserData]);
 
   const logout = useCallback(async () => {
