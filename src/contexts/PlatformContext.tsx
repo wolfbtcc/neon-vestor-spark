@@ -115,7 +115,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  // ── Yield generation (every 30s) ──
+  // ── Yield generation (every 5 min, with catch-up for missed intervals) ──
   const generateYields = useCallback(() => {
     const currentUserRaw = localStorage.getItem(STORAGE_KEYS.currentUser);
     if (!currentUserRaw) return;
@@ -132,43 +132,71 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     const profitHistory = getAllProfitHistory();
     const now = Date.now();
     let userProfitsAccum = new Decimal(user.profits.toString());
+    let userBalanceAccum = new Decimal(user.balance.toString());
+    let changed = false;
 
     for (const inv of activeInvs) {
       // Check if cycle completed
       if (now >= inv.endDate) {
         inv.status = 'completed';
-        continue;
+        changed = true;
+        // Don't continue - still generate yields up to endDate
       }
 
+      // Calculate profit per 5-min interval
       const totalSeconds = (inv.endDate - inv.startDate) / 1000;
       const returnDec = new Decimal(inv.returnPercent.toString()).div(100);
       const amountDec = new Decimal(inv.amount.toString());
       const totalProfit = amountDec.mul(returnDec);
-      const profitPerInterval = totalProfit.div(new Decimal(totalSeconds).div(300));
+      const totalIntervals = new Decimal(totalSeconds).div(300);
+      const profitPerInterval = totalProfit.div(totalIntervals);
 
       const gross = profitPerInterval;
       const pool = gross.mul(POOL_FEE);
       const net = gross.minus(pool);
 
-      userProfitsAccum = userProfitsAccum.plus(net);
+      // Find last profit entry for THIS investment
+      const lastEntry = profitHistory
+        .filter(p => p.investmentId === inv.id)
+        .sort((a, b) => b.createdAt - a.createdAt)[0];
 
-      profitHistory.push({
-        id: generateId(),
-        userId,
-        amount: Number(gross.toFixed(8)),
-        fee: Number(pool.toFixed(8)),
-        net: Number(net.toFixed(8)),
-        investmentId: inv.id,
-        createdAt: now,
-      });
+      const lastTime = lastEntry ? lastEntry.createdAt : inv.startDate;
+      const effectiveNow = Math.min(now, inv.endDate);
+      const elapsedMs = effectiveNow - lastTime;
+
+      // Need at least 5 minutes elapsed
+      if (elapsedMs < 300000) continue;
+
+      const intervals = Math.floor(elapsedMs / 300000);
+      if (intervals <= 0) continue;
+
+      // Generate an entry for each missed 5-min interval
+      for (let i = 0; i < intervals; i++) {
+        const entryTime = lastTime + (i + 1) * 300000;
+        profitHistory.push({
+          id: generateId(),
+          userId,
+          amount: Number(gross.toFixed(8)),
+          fee: Number(pool.toFixed(8)),
+          net: Number(net.toFixed(8)),
+          investmentId: inv.id,
+          createdAt: entryTime,
+        });
+        userProfitsAccum = userProfitsAccum.plus(net);
+        userBalanceAccum = userBalanceAccum.plus(net);
+      }
+
+      changed = true;
     }
 
-    user.profits = Number(userProfitsAccum.toFixed(8));
-    updateUserInStorage(user);
-    saveAllInvestments(allInvestments);
-    saveAllProfitHistory(profitHistory);
-
-    loadUserData(userId);
+    if (changed) {
+      user.profits = Number(userProfitsAccum.toFixed(8));
+      user.balance = Number(userBalanceAccum.toFixed(8));
+      updateUserInStorage(user);
+      saveAllInvestments(allInvestments);
+      saveAllProfitHistory(profitHistory);
+      loadUserData(userId);
+    }
   }, [loadUserData]);
 
   // Start/stop yield interval
