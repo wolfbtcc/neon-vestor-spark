@@ -286,13 +286,12 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error || !data.user) return false;
-      await ensureProfile();
       await loadUserData(data.user.id);
       return true;
     } finally {
       authActionInProgress.current = false;
     }
-  }, [ensureProfile, loadUserData]);
+  }, [loadUserData]);
 
   const register = useCallback(async (name: string, email: string, password: string, referralCode?: string, phone?: string, phoneCountry?: string): Promise<boolean> => {
     authActionInProgress.current = true;
@@ -310,13 +309,13 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
         },
       });
       if (error || !data.user) return false;
-      await ensureProfile({ name, phone: phone || '', phone_country: phoneCountry || 'BR', referred_by_code: referralCode || '' });
+      // Trigger creates profile automatically; loadUserData retries if needed
       await loadUserData(data.user.id);
       return true;
     } finally {
       authActionInProgress.current = false;
     }
-  }, [ensureProfile, loadUserData]);
+  }, [loadUserData]);
 
   const logout = useCallback(async () => {
     await supabase.auth.signOut();
