@@ -24,13 +24,14 @@ export default function TeamPage() {
   const totalEarnings = userCommissions.reduce((sum, c) => sum + c.amount, 0);
 
   // Get referrals per level
-  const directReferrals = allUsers.filter(u => u.referredBy === user.id);
+  const directReferrals = allUsers.filter(u => u.referredBy === user.referralCode);
 
   // Build level data
   function getReferralsAtLevel(level: number): typeof allUsers {
     if (level === 0) return directReferrals;
-    const parentIds = getReferralsAtLevel(level - 1).map(u => u.id);
-    return allUsers.filter(u => u.referredBy && parentIds.includes(u.referredBy));
+    const parents = getReferralsAtLevel(level - 1);
+    const parentCodes = parents.map(u => u.referralCode);
+    return allUsers.filter(u => u.referredBy && parentCodes.includes(u.referredBy));
   }
 
   const levelData = COMMISSION_LEVELS.map((percent, idx) => {
