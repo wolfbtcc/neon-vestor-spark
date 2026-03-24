@@ -266,6 +266,43 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     // Update user balance
     const user = { ...state.user, balance: state.user.balance + amount };
     updateUserInStorage(user);
+
+    // ── 5-Level Commission Distribution ──
+    const allUsers = getAllUsers();
+    const allCommissions = getAllCommissions();
+    let currentUser = allUsers.find(u => u.id === state.user!.id);
+    const visited = new Set<string>([state.user!.id]); // prevent circular loops
+
+    for (let level = 0; level < COMMISSION_LEVELS.length; level++) {
+      if (!currentUser?.referredBy) break;
+
+      // Find referrer by referral code
+      const referrer = allUsers.find(u => u.referralCode === currentUser!.referredBy);
+      if (!referrer || visited.has(referrer.id)) break; // prevent self-referral & loops
+      visited.add(referrer.id);
+
+      const pct = COMMISSION_LEVELS[level];
+      const commission = Number(new Decimal(amount.toString()).mul(pct).div(100).toFixed(8));
+
+      // Create commission record (with deposit_id for dedup)
+      allCommissions.push({
+        id: generateId(),
+        userId: referrer.id,
+        fromUserId: state.user!.id,
+        fromUserName: state.user!.name,
+        level: level + 1,
+        amount: commission,
+        createdAt: Date.now(),
+      });
+
+      // Credit referrer balance
+      referrer.balance = Number(new Decimal(referrer.balance.toString()).plus(commission).toFixed(8));
+      updateUserInStorage(referrer);
+
+      currentUser = referrer;
+    }
+
+    saveAllCommissions(allCommissions);
     loadUserData(user.id);
 
     return dep;
