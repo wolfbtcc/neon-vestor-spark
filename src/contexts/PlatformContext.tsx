@@ -232,7 +232,6 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         currentUserIdRef.current = session.user.id;
-        if (authActionInProgress.current) return;
         setState(prev => ({ ...prev, loading: true }));
         await loadUserData(session.user.id);
       } else {
