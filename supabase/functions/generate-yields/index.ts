@@ -76,18 +76,18 @@ Deno.serve(async (req) => {
       const totalIntervals = durationSeconds / 300
       const profitPer5min = totalProfit / totalIntervals
 
-      const poolPer30s = profitPer30s * POOL_RATE
-      const netPer30s = profitPer30s - poolPer30s
+      const poolPer5min = profitPer5min * POOL_RATE
+      const netPer5min = profitPer5min - poolPer5min
 
-      // Create individual entries for each 30s interval
+      // Create individual entries for each 5-minute interval
       const rows = []
       for (let i = 0; i < intervals; i++) {
-        const entryTime = new Date(lastTime + (i + 1) * 30000).toISOString()
+        const entryTime = new Date(lastTime + (i + 1) * 300000).toISOString()
         rows.push({
           user_id: inv.user_id,
-          amount: profitPer30s,
-          fee: poolPer30s,
-          net: netPer30s,
+          amount: profitPer5min,
+          fee: poolPer5min,
+          net: netPer5min,
           investment_id: inv.id,
           created_at: entryTime,
         })
