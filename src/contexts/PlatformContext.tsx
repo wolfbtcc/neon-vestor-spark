@@ -278,12 +278,14 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
   }, [state.user?.id, loadUserData]);
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    return !error;
-  }, []);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error || !data.user) return false;
+    await loadUserData(data.user.id);
+    return true;
+  }, [loadUserData]);
 
   const register = useCallback(async (name: string, email: string, password: string, referralCode?: string, phone?: string, phoneCountry?: string): Promise<boolean> => {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -295,8 +297,11 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
         },
       },
     });
-    return !error;
-  }, []);
+    if (error || !data.user) return false;
+    // Wait for profile to be created by trigger and load data
+    await loadUserData(data.user.id, 8);
+    return true;
+  }, [loadUserData]);
 
   const logout = useCallback(async () => {
     await supabase.auth.signOut();
