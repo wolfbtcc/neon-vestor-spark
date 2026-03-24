@@ -18,28 +18,34 @@ export type Database = {
         Row: {
           amount: number
           created_at: string
+          deposit_id: string | null
           from_user_id: string
-          from_user_name: string
+          from_user_name: string | null
           id: string
           level: number
+          percentage: number
           user_id: string
         }
         Insert: {
           amount: number
           created_at?: string
+          deposit_id?: string | null
           from_user_id: string
-          from_user_name?: string
+          from_user_name?: string | null
           id?: string
           level: number
+          percentage?: number
           user_id: string
         }
         Update: {
           amount?: number
           created_at?: string
+          deposit_id?: string | null
           from_user_id?: string
-          from_user_name?: string
+          from_user_name?: string | null
           id?: string
           level?: number
+          percentage?: number
           user_id?: string
         }
         Relationships: []
@@ -126,12 +132,12 @@ export type Database = {
           email: string
           id: string
           invested: number
-          is_admin: boolean
+          is_admin: boolean | null
           name: string
-          phone: string
-          phone_country: string
+          phone: string | null
+          phone_country: string | null
           profits: number
-          referral_code: string
+          referral_code: string | null
           referred_by: string | null
           updated_at: string
           user_id: string
@@ -142,12 +148,12 @@ export type Database = {
           email?: string
           id?: string
           invested?: number
-          is_admin?: boolean
+          is_admin?: boolean | null
           name?: string
-          phone?: string
-          phone_country?: string
+          phone?: string | null
+          phone_country?: string | null
           profits?: number
-          referral_code: string
+          referral_code?: string | null
           referred_by?: string | null
           updated_at?: string
           user_id: string
@@ -158,12 +164,12 @@ export type Database = {
           email?: string
           id?: string
           invested?: number
-          is_admin?: boolean
+          is_admin?: boolean | null
           name?: string
-          phone?: string
-          phone_country?: string
+          phone?: string | null
+          phone_country?: string | null
           profits?: number
-          referral_code?: string
+          referral_code?: string | null
           referred_by?: string | null
           updated_at?: string
           user_id?: string
@@ -198,23 +204,15 @@ export type Database = {
           net?: number
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "profit_history_investment_id_fkey"
-            columns: ["investment_id"]
-            isOneToOne: false
-            referencedRelation: "investments"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       withdrawals: {
         Row: {
           amount: number
           created_at: string
           id: string
-          pix_key: string
-          pix_name: string
+          pix_key: string | null
+          pix_name: string | null
           status: string
           type: string
           user_id: string
@@ -223,8 +221,8 @@ export type Database = {
           amount: number
           created_at?: string
           id?: string
-          pix_key?: string
-          pix_name?: string
+          pix_key?: string | null
+          pix_name?: string | null
           status?: string
           type?: string
           user_id: string
@@ -233,8 +231,8 @@ export type Database = {
           amount?: number
           created_at?: string
           id?: string
-          pix_key?: string
-          pix_name?: string
+          pix_key?: string | null
+          pix_name?: string | null
           status?: string
           type?: string
           user_id?: string
@@ -247,6 +245,13 @@ export type Database = {
     }
     Functions: {
       auto_confirm_withdrawals: { Args: never; Returns: undefined }
+      get_latest_profit_times: {
+        Args: { p_investment_ids: string[] }
+        Returns: {
+          investment_id: string
+          last_created_at: string
+        }[]
+      }
       process_deposit: {
         Args: {
           p_amount: number
