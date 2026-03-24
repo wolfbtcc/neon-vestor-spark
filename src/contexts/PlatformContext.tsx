@@ -235,7 +235,6 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
         currentUserIdRef.current = session.user.id;
         if (authActionInProgress.current) return;
         setState(prev => ({ ...prev, loading: true }));
-        await ensureProfile(session.user.user_metadata);
         await loadUserData(session.user.id);
       } else {
         currentUserIdRef.current = null;
@@ -258,7 +257,6 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       if (session?.user) {
         currentUserIdRef.current = session.user.id;
         setState(prev => ({ ...prev, loading: true }));
-        await ensureProfile(session.user.user_metadata);
         await loadUserData(session.user.id);
       } else {
         setState(prev => ({ ...prev, loading: false }));
@@ -266,7 +264,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [loadUserData, ensureProfile]);
+  }, [loadUserData]);
 
   useEffect(() => {
     if (state.user) {
