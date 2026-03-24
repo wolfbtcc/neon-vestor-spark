@@ -288,7 +288,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     try {
       const { data, error } = await supabase.auth.signInWithPassword({ email, password });
       if (error || !data.user) return false;
-      await ensureProfile(data.user.id);
+      await ensureProfile();
       await loadUserData(data.user.id);
       return true;
     } finally {
