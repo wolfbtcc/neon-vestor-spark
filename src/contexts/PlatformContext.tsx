@@ -61,13 +61,27 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
   const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const currentUserIdRef = useRef<string | null>(null);
 
-  const loadUserData = useCallback(async (userId: string) => {
+  const loadUserData = useCallback(async (userId: string, retries = 5) => {
     try {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
+      let profile: any = null;
+      
+      // Retry loop for new signups where trigger may not have created profile yet
+      for (let i = 0; i < retries; i++) {
+        const { data } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('user_id', userId)
+          .single();
+        
+        if (data) {
+          profile = data;
+          break;
+        }
+        
+        if (i < retries - 1) {
+          await new Promise(r => setTimeout(r, 500));
+        }
+      }
 
       if (!profile) {
         setState(prev => ({ ...prev, loading: false }));
