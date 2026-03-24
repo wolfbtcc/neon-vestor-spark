@@ -235,7 +235,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
         currentUserIdRef.current = session.user.id;
         if (authActionInProgress.current) return;
         setState(prev => ({ ...prev, loading: true }));
-        await ensureProfile(session.user.id);
+        await ensureProfile(session.user.user_metadata);
         await loadUserData(session.user.id);
       } else {
         currentUserIdRef.current = null;
