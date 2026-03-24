@@ -175,7 +175,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (state.user) {
       if (yieldIntervalRef.current) clearInterval(yieldIntervalRef.current);
-      yieldIntervalRef.current = setInterval(generateYields, 30000);
+      yieldIntervalRef.current = setInterval(generateYields, 300000);
       // Generate immediately on login
       setTimeout(generateYields, 1000);
     } else {

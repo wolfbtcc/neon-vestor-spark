@@ -60,21 +60,21 @@ Deno.serve(async (req) => {
       const effectiveNow = Math.min(now, endDate)
       const elapsedMs = effectiveNow - lastTime
 
-      // Need at least 30 seconds elapsed
-      if (elapsedMs < 30000) continue
+      // Need at least 5 minutes (300s) elapsed
+      if (elapsedMs < 300000) continue
 
-      const intervals = Math.floor(elapsedMs / 30000)
+      const intervals = Math.floor(elapsedMs / 300000)
       if (intervals <= 0) continue
 
-      // Precise calculation per 30s interval
+      // Precise calculation per 5-minute interval
       const amount = inv.amount
       const returnPct = inv.return_percent
       const durationDays = inv.duration_days
 
       const totalProfit = amount * (returnPct / 100)
       const durationSeconds = durationDays * 86400
-      const totalIntervals = durationSeconds / 30
-      const profitPer30s = totalProfit / totalIntervals
+      const totalIntervals = durationSeconds / 300
+      const profitPer5min = totalProfit / totalIntervals
 
       const poolPer30s = profitPer30s * POOL_RATE
       const netPer30s = profitPer30s - poolPer30s
