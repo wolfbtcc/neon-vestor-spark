@@ -235,33 +235,20 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
   }, [state.user, loadUserData]);
 
   const invest = useCallback(async (amount: number, durationDays: number, returnPercent: number): Promise<boolean> => {
-    if (!state.user || amount <= 0 || state.user.balance < amount - 0.01) return false;
+    if (!state.user || amount <= 0) return false;
 
-    const cycleNumber = state.investments.filter(i => i.userId === state.user!.id).length + 1;
-    const now = new Date();
-    const endDate = new Date(now.getTime() + durationDays * 86400000);
-
-    const { error: invError } = await supabase.from('investments').insert({
-      user_id: state.user.id,
-      amount,
-      cycle_number: cycleNumber,
-      duration_days: durationDays,
-      return_percent: returnPercent,
-      start_date: now.toISOString(),
-      end_date: endDate.toISOString(),
-      status: 'active',
-      profit: amount * (returnPercent / 100),
+    const { error } = await supabase.rpc('process_invest', {
+      p_user_id: state.user.id,
+      p_amount: amount,
+      p_duration_days: durationDays,
+      p_return_percent: returnPercent,
     });
 
-    if (invError) { console.error('Invest error:', invError); return false; }
-
-    await supabase.from('profiles').update({
-      balance: state.user.balance - amount,
-    }).eq('user_id', state.user.id);
+    if (error) { console.error('Invest error:', error); return false; }
 
     await loadUserData(state.user.id);
     return true;
-  }, [state.user, state.investments, loadUserData]);
+  }, [state.user, loadUserData]);
 
   const withdraw = useCallback(async (amount: number, pixName?: string, pixKey?: string, type?: 'profits' | 'commission' | 'pool'): Promise<boolean> => {
     if (!state.user || state.user.profits < amount || amount <= 0) return false;
