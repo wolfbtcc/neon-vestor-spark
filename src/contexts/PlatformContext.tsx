@@ -171,17 +171,23 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     loadUserData(userId);
   }, [loadUserData]);
 
-  // Start/stop yield interval — PAUSED
+  // Start/stop yield interval
   useEffect(() => {
-    // Yield generation is currently PAUSED
-    if (yieldIntervalRef.current) {
-      clearInterval(yieldIntervalRef.current);
-      yieldIntervalRef.current = null;
+    if (state.user) {
+      if (yieldIntervalRef.current) clearInterval(yieldIntervalRef.current);
+      yieldIntervalRef.current = setInterval(generateYields, 30000);
+      // Generate immediately on login
+      setTimeout(generateYields, 1000);
+    } else {
+      if (yieldIntervalRef.current) {
+        clearInterval(yieldIntervalRef.current);
+        yieldIntervalRef.current = null;
+      }
     }
     return () => {
       if (yieldIntervalRef.current) clearInterval(yieldIntervalRef.current);
     };
-  }, [state.user?.id]);
+  }, [state.user?.id, generateYields]);
 
   // Init: check for saved session
   useEffect(() => {
@@ -211,13 +217,6 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     const users = getAllUsers();
     if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) return false;
 
-    // Resolve referral code to user ID
-    let referredByUserId: string | null = null;
-    if (referralCode) {
-      const referrer = users.find(u => u.referralCode === referralCode);
-      if (referrer) referredByUserId = referrer.id;
-    }
-
     const newUser: User = {
       id: generateId(),
       name,
@@ -229,9 +228,9 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       invested: 0,
       profits: 0,
       referralCode: generateReferralCode(),
-      referredBy: referredByUserId,
+      referredBy: referralCode || null,
       createdAt: Date.now(),
-      isAdmin: users.length === 0,
+      isAdmin: users.length === 0, // first user is admin
     };
 
     users.push(newUser);
@@ -267,35 +266,6 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     // Update user balance
     const user = { ...state.user, balance: state.user.balance + amount };
     updateUserInStorage(user);
-
-    // Generate commissions for referral chain (5 levels)
-    const allUsers = getAllUsers();
-    const allCommissions = getAllCommissions();
-    let currentUserId: string | null = user.referredBy;
-    for (let level = 0; level < COMMISSION_LEVELS.length && currentUserId; level++) {
-      const referrer = allUsers.find(u => u.id === currentUserId);
-      if (!referrer) break;
-
-      const commissionAmount = amount * (COMMISSION_LEVELS[level] / 100);
-      const commission: Commission = {
-        id: generateId(),
-        userId: referrer.id,
-        fromUserId: user.id,
-        fromUserName: user.name,
-        level: level + 1,
-        amount: commissionAmount,
-        createdAt: Date.now(),
-      };
-      allCommissions.push(commission);
-
-      // Credit commission to referrer's profits
-      referrer.profits += commissionAmount;
-      updateUserInStorage(referrer);
-
-      currentUserId = referrer.referredBy;
-    }
-    saveAllCommissions(allCommissions);
-
     loadUserData(user.id);
 
     return dep;
