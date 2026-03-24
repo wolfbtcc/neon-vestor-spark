@@ -60,7 +60,6 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
 
   const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const currentUserIdRef = useRef<string | null>(null);
-  const authActionInProgress = useRef(false);
 
   const ensureProfile = useCallback(async (metadata?: { name?: string; phone?: string; phone_country?: string; referred_by_code?: string }) => {
     try {
