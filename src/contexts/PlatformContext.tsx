@@ -267,7 +267,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     });
 
     return () => subscription.unsubscribe();
-  }, [loadUserData]);
+  }, [loadUserData, ensureProfile]);
 
   useEffect(() => {
     if (state.user) {
