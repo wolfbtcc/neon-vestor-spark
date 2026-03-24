@@ -280,7 +280,6 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
   }, [state.user?.id, loadUserData]);
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
-    authActionInProgress.current = true;
     const { data, error } = await supabase.auth.signInWithPassword({ email, password });
     return !error && !!data.user;
   }, []);
