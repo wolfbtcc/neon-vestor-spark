@@ -236,6 +236,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       if (session?.user) {
         currentUserIdRef.current = session.user.id;
         setState(prev => ({ ...prev, loading: true }));
+        await ensureProfile(session.user.id);
         await loadUserData(session.user.id);
       } else {
         currentUserIdRef.current = null;
