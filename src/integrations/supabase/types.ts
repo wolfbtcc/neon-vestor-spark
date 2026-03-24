@@ -249,6 +249,36 @@ export type Database = {
         Returns: undefined
       }
       auto_confirm_withdrawals: { Args: never; Returns: undefined }
+      ensure_profile_for_current_user: {
+        Args: {
+          p_name?: string
+          p_phone?: string
+          p_phone_country?: string
+          p_referred_by_code?: string
+        }
+        Returns: {
+          balance: number
+          created_at: string
+          email: string
+          id: string
+          invested: number
+          is_admin: boolean | null
+          name: string
+          phone: string | null
+          phone_country: string | null
+          profits: number
+          referral_code: string | null
+          referred_by: string | null
+          updated_at: string
+          user_id: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "profiles"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
       get_all_profiles_admin: {
         Args: never
         Returns: {
