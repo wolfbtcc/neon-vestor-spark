@@ -61,27 +61,31 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
   const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const currentUserIdRef = useRef<string | null>(null);
 
-  const loadUserData = useCallback(async (userId: string, retries = 5) => {
+  const ensureProfile = useCallback(async (fallbackUserId?: string) => {
     try {
-      let profile: any = null;
-      
-      // Retry loop for new signups where trigger may not have created profile yet
-      for (let i = 0; i < retries; i++) {
-        const { data } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('user_id', userId)
-          .single();
-        
-        if (data) {
-          profile = data;
-          break;
-        }
-        
-        if (i < retries - 1) {
-          await new Promise(r => setTimeout(r, 500));
-        }
-      }
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser || (fallbackUserId && authUser.id !== fallbackUserId)) return;
+
+      await supabase.rpc('ensure_profile_for_current_user', {
+        p_name: authUser.user_metadata?.name ?? null,
+        p_phone: authUser.user_metadata?.phone ?? null,
+        p_phone_country: authUser.user_metadata?.phone_country ?? null,
+        p_referred_by_code: authUser.user_metadata?.referred_by_code ?? null,
+      });
+    } catch (err) {
+      console.error('Error ensuring profile:', err);
+    }
+  }, []);
+
+  const loadUserData = useCallback(async (userId: string) => {
+    try {
+      await ensureProfile(userId);
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
 
       if (!profile) {
         setState(prev => ({ ...prev, loading: false }));
@@ -167,7 +171,6 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
         createdAt: new Date(p.created_at).getTime(),
       }));
 
-      // Load team members
       let teamMembers: TeamMember[] = [];
       try {
         const { data: teamData } = await supabase.rpc('get_team_members');
@@ -184,7 +187,6 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
         }
       } catch { /* ignore */ }
 
-      // Load all users for admin
       let allUsers: User[] = [user];
       if (profile.is_admin) {
         try {
@@ -224,13 +226,13 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       console.error('Error loading user data:', err);
       setState(prev => ({ ...prev, loading: false }));
     }
-  }, []);
+  }, [ensureProfile]);
 
-  // Auth state listener
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         currentUserIdRef.current = session.user.id;
+        setState(prev => ({ ...prev, loading: true }));
         await loadUserData(session.user.id);
       } else {
         currentUserIdRef.current = null;
@@ -249,10 +251,11 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session?.user) {
         currentUserIdRef.current = session.user.id;
-        loadUserData(session.user.id);
+        setState(prev => ({ ...prev, loading: true }));
+        await loadUserData(session.user.id);
       } else {
         setState(prev => ({ ...prev, loading: false }));
       }
@@ -261,7 +264,6 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
   }, [loadUserData]);
 
-  // Periodic refresh to pick up yield updates from edge function
   useEffect(() => {
     if (state.user) {
       refreshIntervalRef.current = setInterval(() => {
@@ -298,10 +300,10 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       },
     });
     if (error || !data.user) return false;
-    // Wait for profile to be created by trigger and load data
-    await loadUserData(data.user.id, 8);
+    await ensureProfile(data.user.id);
+    await loadUserData(data.user.id);
     return true;
-  }, [loadUserData]);
+  }, [ensureProfile, loadUserData]);
 
   const logout = useCallback(async () => {
     await supabase.auth.signOut();
