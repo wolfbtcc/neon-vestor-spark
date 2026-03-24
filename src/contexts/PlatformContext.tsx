@@ -60,7 +60,6 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
 
   const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const currentUserIdRef = useRef<string | null>(null);
-  const authActionInProgress = useRef(false);
 
   const ensureProfile = useCallback(async (metadata?: { name?: string; phone?: string; phone_country?: string; referred_by_code?: string }) => {
     try {
@@ -233,7 +232,6 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
       if (session?.user) {
         currentUserIdRef.current = session.user.id;
-        if (authActionInProgress.current) return;
         setState(prev => ({ ...prev, loading: true }));
         await loadUserData(session.user.id);
       } else {
@@ -282,40 +280,25 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
   }, [state.user?.id, loadUserData]);
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
-    authActionInProgress.current = true;
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error || !data.user) return false;
-      await loadUserData(data.user.id);
-      return true;
-    } finally {
-      authActionInProgress.current = false;
-    }
-  }, [loadUserData]);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    return !error && !!data.user;
+  }, []);
 
   const register = useCallback(async (name: string, email: string, password: string, referralCode?: string, phone?: string, phoneCountry?: string): Promise<boolean> => {
-    authActionInProgress.current = true;
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name,
-            phone: phone || '',
-            phone_country: phoneCountry || 'BR',
-            referred_by_code: referralCode || undefined,
-          },
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name,
+          phone: phone || '',
+          phone_country: phoneCountry || 'BR',
+          referred_by_code: referralCode || undefined,
         },
-      });
-      if (error || !data.user) return false;
-      // Trigger creates profile automatically; loadUserData retries if needed
-      await loadUserData(data.user.id);
-      return true;
-    } finally {
-      authActionInProgress.current = false;
-    }
-  }, [loadUserData]);
+      },
+    });
+    return !error && !!data.user;
+  }, []);
 
   const logout = useCallback(async () => {
     await supabase.auth.signOut();
