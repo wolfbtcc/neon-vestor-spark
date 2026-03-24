@@ -281,39 +281,25 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     authActionInProgress.current = true;
-    try {
-      const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-      if (error || !data.user) return false;
-      await loadUserData(data.user.id);
-      return true;
-    } finally {
-      authActionInProgress.current = false;
-    }
-  }, [loadUserData]);
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    return !error && !!data.user;
+  }, []);
 
   const register = useCallback(async (name: string, email: string, password: string, referralCode?: string, phone?: string, phoneCountry?: string): Promise<boolean> => {
-    authActionInProgress.current = true;
-    try {
-      const { data, error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name,
-            phone: phone || '',
-            phone_country: phoneCountry || 'BR',
-            referred_by_code: referralCode || undefined,
-          },
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: {
+          name,
+          phone: phone || '',
+          phone_country: phoneCountry || 'BR',
+          referred_by_code: referralCode || undefined,
         },
-      });
-      if (error || !data.user) return false;
-      // Trigger creates profile automatically; loadUserData retries if needed
-      await loadUserData(data.user.id);
-      return true;
-    } finally {
-      authActionInProgress.current = false;
-    }
-  }, [loadUserData]);
+      },
+    });
+    return !error && !!data.user;
+  }, []);
 
   const logout = useCallback(async () => {
     await supabase.auth.signOut();
