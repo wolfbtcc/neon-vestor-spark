@@ -229,7 +229,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       console.error('Error loading user data:', err);
       setState(prev => ({ ...prev, loading: false }));
     }
-  }, [ensureProfile]);
+  }, []);
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
