@@ -62,16 +62,13 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
   const currentUserIdRef = useRef<string | null>(null);
   const authActionInProgress = useRef(false);
 
-  const ensureProfile = useCallback(async (fallbackUserId?: string) => {
+  const ensureProfile = useCallback(async (metadata?: { name?: string; phone?: string; phone_country?: string; referred_by_code?: string }) => {
     try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser || (fallbackUserId && authUser.id !== fallbackUserId)) return;
-
       await supabase.rpc('ensure_profile_for_current_user', {
-        p_name: authUser.user_metadata?.name ?? null,
-        p_phone: authUser.user_metadata?.phone ?? null,
-        p_phone_country: authUser.user_metadata?.phone_country ?? null,
-        p_referred_by_code: authUser.user_metadata?.referred_by_code ?? null,
+        p_name: metadata?.name ?? null,
+        p_phone: metadata?.phone ?? null,
+        p_phone_country: metadata?.phone_country ?? null,
+        p_referred_by_code: metadata?.referred_by_code ?? null,
       });
     } catch (err) {
       console.error('Error ensuring profile:', err);
