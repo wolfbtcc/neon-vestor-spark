@@ -312,7 +312,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
         },
       });
       if (error || !data.user) return false;
-      await ensureProfile(data.user.id);
+      await ensureProfile({ name, phone: phone || '', phone_country: phoneCountry || 'BR', referred_by_code: referralCode || '' });
       await loadUserData(data.user.id);
       return true;
     } finally {
