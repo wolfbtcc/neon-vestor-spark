@@ -9,7 +9,7 @@ const LEVEL_NAMES = ['Nível 1 – Direto', 'Nível 2', 'Nível 3', 'Nível 4', 
 const LEVEL_COLORS = ['text-neon-cyan', 'text-neon-green', 'text-blue-400', 'text-purple-400', 'text-yellow-400'];
 
 export default function TeamPage() {
-  const { user, allUsers, commissions, withdraw } = usePlatform();
+  const { user, teamMembers, commissions, withdraw } = usePlatform();
   const navigate = useNavigate();
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [expandedLevel, setExpandedLevel] = useState<number | null>(null);
@@ -23,25 +23,17 @@ export default function TeamPage() {
   const userCommissions = commissions.filter(c => c.userId === user.id);
   const totalEarnings = userCommissions.reduce((sum, c) => sum + c.amount, 0);
 
-  // Get referrals per level
-  const directReferrals = allUsers.filter(u => u.referredBy === user.referralCode);
-
-  // Build level data
-  function getReferralsAtLevel(level: number): typeof allUsers {
-    if (level === 0) return directReferrals;
-    const parents = getReferralsAtLevel(level - 1);
-    const parentCodes = parents.map(u => u.referralCode);
-    return allUsers.filter(u => u.referredBy && parentCodes.includes(u.referredBy));
-  }
-
+  // Build level data from teamMembers
   const levelData = COMMISSION_LEVELS.map((percent, idx) => {
-    const refs = getReferralsAtLevel(idx);
-    const levelCommissions = userCommissions.filter(c => c.level === idx + 1);
+    const level = idx + 1;
+    const refs = teamMembers.filter(m => m.level === level);
+    const levelCommissions = userCommissions.filter(c => c.level === level);
     const earnings = levelCommissions.reduce((sum, c) => sum + c.amount, 0);
-    return { level: idx + 1, percent, refs, earnings, name: LEVEL_NAMES[idx], color: LEVEL_COLORS[idx] };
+    return { level, percent, refs, earnings, name: LEVEL_NAMES[idx], color: LEVEL_COLORS[idx] };
   });
 
-  const totalReferrals = levelData.reduce((sum, l) => sum + l.refs.length, 0);
+  const totalReferrals = teamMembers.length;
+  const directReferrals = teamMembers.filter(m => m.level === 1);
 
   const handleWithdrawCommission = async () => {
     if (!pixName.trim()) { toast.error('Informe o nome'); return; }
@@ -180,7 +172,7 @@ export default function TeamPage() {
                     {l.refs.map(ref => {
                       const d = new Date(ref.createdAt);
                       return (
-                        <div key={ref.id} className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border border-border">
+                        <div key={ref.userId} className="flex items-center gap-2 p-2 rounded-lg bg-muted/50 border border-border">
                           <div className="w-7 h-7 rounded-full bg-neon-cyan/10 flex items-center justify-center shrink-0">
                             <Users className="w-3.5 h-3.5 text-neon-cyan" />
                           </div>
@@ -246,7 +238,7 @@ export default function TeamPage() {
             <h3 className="text-xs font-semibold tracking-widest text-muted-foreground uppercase">Indicados Diretos</h3>
             <div className="space-y-2 max-h-60 overflow-y-auto">
               {directReferrals.map(ref => (
-                <div key={ref.id} className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 border border-border">
+                <div key={ref.userId} className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 border border-border">
                   <div className="w-9 h-9 rounded-full bg-neon-cyan/10 flex items-center justify-center shrink-0">
                     <Users className="w-4 h-4 text-neon-cyan" />
                   </div>

@@ -1,10 +1,20 @@
 import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
-import Decimal from 'decimal.js';
+import { supabase } from '@/integrations/supabase/client';
 import {
   User, Investment, Deposit, Withdrawal, Commission, ProfitEntry,
-  generateId, generateReferralCode, generatePixCode, generateWalletAddress,
+  generatePixCode, generateWalletAddress,
   COMMISSION_LEVELS,
 } from '@/lib/platform';
+
+interface TeamMember {
+  userId: string;
+  name: string;
+  email: string;
+  phone: string;
+  level: number;
+  referralCode: string;
+  createdAt: number;
+}
 
 interface PlatformState {
   user: User | null;
@@ -14,6 +24,7 @@ interface PlatformState {
   commissions: Commission[];
   profitHistory: ProfitEntry[];
   allUsers: User[];
+  teamMembers: TeamMember[];
   loading: boolean;
 }
 
@@ -34,56 +45,6 @@ interface PlatformContextType extends PlatformState {
 
 const PlatformContext = createContext<PlatformContextType | null>(null);
 
-Decimal.set({ precision: 20, rounding: Decimal.ROUND_DOWN });
-const POOL_FEE = new Decimal('0.15');
-
-// ── localStorage helpers ──
-const STORAGE_KEYS = {
-  users: 'vortex_users',
-  investments: 'vortex_investments',
-  deposits: 'vortex_deposits',
-  withdrawals: 'vortex_withdrawals',
-  commissions: 'vortex_commissions',
-  profitHistory: 'vortex_profitHistory',
-  currentUser: 'currentUser',
-};
-
-function loadFromStorage<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch { return fallback; }
-}
-
-function saveToStorage(key: string, data: any) {
-  localStorage.setItem(key, JSON.stringify(data));
-}
-
-function getAllUsers(): User[] { return loadFromStorage<User[]>(STORAGE_KEYS.users, []); }
-function saveAllUsers(users: User[]) { saveToStorage(STORAGE_KEYS.users, users); }
-
-function getAllInvestments(): Investment[] { return loadFromStorage<Investment[]>(STORAGE_KEYS.investments, []); }
-function saveAllInvestments(inv: Investment[]) { saveToStorage(STORAGE_KEYS.investments, inv); }
-
-function getAllDeposits(): Deposit[] { return loadFromStorage<Deposit[]>(STORAGE_KEYS.deposits, []); }
-function saveAllDeposits(d: Deposit[]) { saveToStorage(STORAGE_KEYS.deposits, d); }
-
-function getAllWithdrawals(): Withdrawal[] { return loadFromStorage<Withdrawal[]>(STORAGE_KEYS.withdrawals, []); }
-function saveAllWithdrawals(w: Withdrawal[]) { saveToStorage(STORAGE_KEYS.withdrawals, w); }
-
-function getAllCommissions(): Commission[] { return loadFromStorage<Commission[]>(STORAGE_KEYS.commissions, []); }
-function saveAllCommissions(c: Commission[]) { saveToStorage(STORAGE_KEYS.commissions, c); }
-
-function getAllProfitHistory(): ProfitEntry[] { return loadFromStorage<ProfitEntry[]>(STORAGE_KEYS.profitHistory, []); }
-function saveAllProfitHistory(p: ProfitEntry[]) { saveToStorage(STORAGE_KEYS.profitHistory, p); }
-
-function updateUserInStorage(user: User) {
-  const users = getAllUsers();
-  const idx = users.findIndex(u => u.id === user.id);
-  if (idx >= 0) users[idx] = user; else users.push(user);
-  saveAllUsers(users);
-}
-
 export function PlatformProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<PlatformState>({
     user: null,
@@ -93,363 +54,377 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     commissions: [],
     profitHistory: [],
     allUsers: [],
+    teamMembers: [],
     loading: true,
   });
 
-  const yieldIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const refreshIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const currentUserIdRef = useRef<string | null>(null);
 
-  const loadUserData = useCallback((userId: string) => {
-    const allUsers = getAllUsers();
-    const user = allUsers.find(u => u.id === userId) || null;
-    if (!user) return;
+  const loadUserData = useCallback(async (userId: string) => {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
 
-    setState({
-      user,
-      investments: getAllInvestments().filter(i => i.userId === userId),
-      deposits: getAllDeposits().filter(d => d.userId === userId),
-      withdrawals: getAllWithdrawals().filter(w => w.userId === userId),
-      commissions: getAllCommissions().filter(c => c.userId === userId),
-      profitHistory: getAllProfitHistory().filter(p => p.userId === userId).sort((a, b) => b.createdAt - a.createdAt),
-      allUsers,
-      loading: false,
-    });
-  }, []);
-
-  // ── Yield generation (every 5 min, with catch-up for missed intervals) ──
-  const generateYields = useCallback(() => {
-    const currentUserRaw = localStorage.getItem(STORAGE_KEYS.currentUser);
-    if (!currentUserRaw) return;
-    const { id: userId } = JSON.parse(currentUserRaw);
-
-    const allInvestments = getAllInvestments();
-    const activeInvs = allInvestments.filter(i => i.userId === userId && i.status === 'active');
-    if (activeInvs.length === 0) return;
-
-    const allUsers = getAllUsers();
-    const user = allUsers.find(u => u.id === userId);
-    if (!user) return;
-
-    const profitHistory = getAllProfitHistory();
-    const now = Date.now();
-    let userProfitsAccum = new Decimal(user.profits.toString());
-    let userBalanceAccum = new Decimal(user.balance.toString());
-    let changed = false;
-
-    for (const inv of activeInvs) {
-      // Check if cycle completed
-      if (now >= inv.endDate) {
-        inv.status = 'completed';
-        changed = true;
-        // Don't continue - still generate yields up to endDate
-      }
-
-      // Calculate profit per 5-min interval
-      const totalSeconds = (inv.endDate - inv.startDate) / 1000;
-      const returnDec = new Decimal(inv.returnPercent.toString()).div(100);
-      const amountDec = new Decimal(inv.amount.toString());
-      const totalProfit = amountDec.mul(returnDec);
-      const totalIntervals = new Decimal(totalSeconds).div(300);
-      const profitPerInterval = totalProfit.div(totalIntervals);
-
-      const gross = profitPerInterval;
-      const pool = gross.mul(POOL_FEE);
-      const net = gross.minus(pool);
-
-      // Find last profit entry for THIS investment
-      const lastEntry = profitHistory
-        .filter(p => p.investmentId === inv.id)
-        .sort((a, b) => b.createdAt - a.createdAt)[0];
-
-      const lastTime = lastEntry ? lastEntry.createdAt : inv.startDate;
-      const effectiveNow = Math.min(now, inv.endDate);
-      const elapsedMs = effectiveNow - lastTime;
-
-      // Need at least 5 minutes elapsed
-      if (elapsedMs < 300000) continue;
-
-      const intervals = Math.floor(elapsedMs / 300000);
-      if (intervals <= 0) continue;
-
-      // Generate an entry for each missed 5-min interval
-      for (let i = 0; i < intervals; i++) {
-        const entryTime = lastTime + (i + 1) * 300000;
-        profitHistory.push({
-          id: generateId(),
-          userId,
-          amount: Number(gross.toFixed(8)),
-          fee: Number(pool.toFixed(8)),
-          net: Number(net.toFixed(8)),
-          investmentId: inv.id,
-          createdAt: entryTime,
-        });
-        userProfitsAccum = userProfitsAccum.plus(net);
-        userBalanceAccum = userBalanceAccum.plus(net);
-      }
-
-      changed = true;
-    }
-
-    if (changed) {
-      user.profits = Number(userProfitsAccum.toFixed(8));
-      user.balance = Number(userBalanceAccum.toFixed(8));
-      updateUserInStorage(user);
-      saveAllInvestments(allInvestments);
-      saveAllProfitHistory(profitHistory);
-      loadUserData(userId);
-    }
-  }, [loadUserData]);
-
-  // Start/stop yield interval
-  useEffect(() => {
-    if (state.user) {
-      if (yieldIntervalRef.current) clearInterval(yieldIntervalRef.current);
-      yieldIntervalRef.current = setInterval(generateYields, 300000);
-      // Generate immediately on login
-      setTimeout(generateYields, 1000);
-    } else {
-      if (yieldIntervalRef.current) {
-        clearInterval(yieldIntervalRef.current);
-        yieldIntervalRef.current = null;
-      }
-    }
-    return () => {
-      if (yieldIntervalRef.current) clearInterval(yieldIntervalRef.current);
-    };
-  }, [state.user?.id, generateYields]);
-
-  // Init: check for saved session
-  useEffect(() => {
-    const raw = localStorage.getItem(STORAGE_KEYS.currentUser);
-    if (raw) {
-      try {
-        const { id } = JSON.parse(raw);
-        loadUserData(id);
-      } catch {
+      if (!profile) {
         setState(prev => ({ ...prev, loading: false }));
+        return;
       }
-    } else {
+
+      const [invRes, depRes, wdRes, commRes, profRes] = await Promise.all([
+        supabase.from('investments').select('*').eq('user_id', userId),
+        supabase.from('deposits').select('*').eq('user_id', userId),
+        supabase.from('withdrawals').select('*').eq('user_id', userId),
+        supabase.from('commissions').select('*').eq('user_id', userId),
+        supabase.from('profit_history').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(200),
+      ]);
+
+      const user: User = {
+        id: profile.user_id,
+        name: profile.name,
+        email: profile.email,
+        phone: profile.phone || '',
+        phoneCountry: profile.phone_country || 'BR',
+        password: '',
+        balance: Number(profile.balance),
+        invested: Number(profile.invested),
+        profits: Number(profile.profits),
+        referralCode: profile.referral_code || '',
+        referredBy: profile.referred_by,
+        createdAt: new Date(profile.created_at).getTime(),
+        isAdmin: profile.is_admin || false,
+      };
+
+      const investments: Investment[] = (invRes.data || []).map(i => ({
+        id: i.id,
+        userId: i.user_id,
+        amount: Number(i.amount),
+        cycleNumber: i.cycle_number,
+        durationDays: i.duration_days,
+        returnPercent: Number(i.return_percent),
+        startDate: new Date(i.start_date).getTime(),
+        endDate: new Date(i.end_date).getTime(),
+        status: i.status as 'active' | 'completed' | 'withdrawn',
+        profit: Number(i.profit),
+      }));
+
+      const deposits: Deposit[] = (depRes.data || []).map(d => ({
+        id: d.id,
+        userId: d.user_id,
+        amount: Number(d.amount),
+        method: d.method as 'pix' | 'usdt',
+        status: d.status as 'pending' | 'confirmed',
+        pixCode: d.pix_code || undefined,
+        walletAddress: d.wallet_address || undefined,
+        createdAt: new Date(d.created_at).getTime(),
+      }));
+
+      const withdrawals: Withdrawal[] = (wdRes.data || []).map(w => ({
+        id: w.id,
+        userId: w.user_id,
+        amount: Number(w.amount),
+        pixName: w.pix_name || '',
+        pixKey: w.pix_key || '',
+        type: w.type as 'profits' | 'commission' | 'pool',
+        status: w.status as 'pending' | 'completed',
+        createdAt: new Date(w.created_at).getTime(),
+      }));
+
+      const commissions: Commission[] = (commRes.data || []).map(c => ({
+        id: c.id,
+        userId: c.user_id,
+        fromUserId: c.from_user_id,
+        fromUserName: c.from_user_name || '',
+        level: c.level,
+        amount: Number(c.amount),
+        createdAt: new Date(c.created_at).getTime(),
+      }));
+
+      const profitHistory: ProfitEntry[] = (profRes.data || []).map(p => ({
+        id: p.id,
+        userId: p.user_id,
+        amount: Number(p.amount),
+        fee: Number(p.fee),
+        net: Number(p.net),
+        investmentId: p.investment_id || '',
+        createdAt: new Date(p.created_at).getTime(),
+      }));
+
+      // Load team members
+      let teamMembers: TeamMember[] = [];
+      try {
+        const { data: teamData } = await supabase.rpc('get_team_members');
+        if (teamData) {
+          teamMembers = (teamData as any[]).map(t => ({
+            userId: t.member_user_id,
+            name: t.member_name,
+            email: t.member_email,
+            phone: t.member_phone || '',
+            level: t.member_level,
+            referralCode: t.member_referral_code || '',
+            createdAt: new Date(t.member_created_at).getTime(),
+          }));
+        }
+      } catch { /* ignore */ }
+
+      // Load all users for admin
+      let allUsers: User[] = [user];
+      if (profile.is_admin) {
+        try {
+          const { data: allProfiles } = await supabase.rpc('get_all_profiles_admin');
+          if (allProfiles) {
+            allUsers = (allProfiles as any[]).map(p => ({
+              id: p.user_id,
+              name: p.name,
+              email: p.email,
+              phone: p.phone || '',
+              phoneCountry: p.phone_country || 'BR',
+              password: '',
+              balance: Number(p.balance),
+              invested: Number(p.invested),
+              profits: Number(p.profits),
+              referralCode: p.referral_code || '',
+              referredBy: p.referred_by,
+              createdAt: new Date(p.created_at).getTime(),
+              isAdmin: p.is_admin || false,
+            }));
+          }
+        } catch { /* ignore */ }
+      }
+
+      setState({
+        user,
+        investments,
+        deposits,
+        withdrawals,
+        commissions,
+        profitHistory,
+        allUsers,
+        teamMembers,
+        loading: false,
+      });
+    } catch (err) {
+      console.error('Error loading user data:', err);
       setState(prev => ({ ...prev, loading: false }));
     }
+  }, []);
+
+  // Auth state listener
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        currentUserIdRef.current = session.user.id;
+        await loadUserData(session.user.id);
+      } else {
+        currentUserIdRef.current = null;
+        setState(prev => ({
+          ...prev,
+          user: null,
+          investments: [],
+          deposits: [],
+          withdrawals: [],
+          commissions: [],
+          profitHistory: [],
+          allUsers: [],
+          teamMembers: [],
+          loading: false,
+        }));
+      }
+    });
+
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        currentUserIdRef.current = session.user.id;
+        loadUserData(session.user.id);
+      } else {
+        setState(prev => ({ ...prev, loading: false }));
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, [loadUserData]);
+
+  // Periodic refresh to pick up yield updates from edge function
+  useEffect(() => {
+    if (state.user) {
+      refreshIntervalRef.current = setInterval(() => {
+        if (currentUserIdRef.current) {
+          loadUserData(currentUserIdRef.current);
+        }
+      }, 30000);
+    } else {
+      if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
+    }
+    return () => {
+      if (refreshIntervalRef.current) clearInterval(refreshIntervalRef.current);
+    };
+  }, [state.user?.id, loadUserData]);
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
-    const users = getAllUsers();
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
-    if (!user) return false;
-    saveToStorage(STORAGE_KEYS.currentUser, { id: user.id, email: user.email });
-    loadUserData(user.id);
-    return true;
-  }, [loadUserData]);
+    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    return !error;
+  }, []);
 
   const register = useCallback(async (name: string, email: string, password: string, referralCode?: string, phone?: string, phoneCountry?: string): Promise<boolean> => {
-    const users = getAllUsers();
-    if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) return false;
-
-    const newUser: User = {
-      id: generateId(),
-      name,
+    const { error } = await supabase.auth.signUp({
       email,
-      phone: phone || '',
-      phoneCountry: phoneCountry || 'BR',
       password,
-      balance: 0,
-      invested: 0,
-      profits: 0,
-      referralCode: generateReferralCode(),
-      referredBy: referralCode || null,
-      createdAt: Date.now(),
-      isAdmin: users.length === 0, // first user is admin
-    };
+      options: {
+        data: {
+          name,
+          phone: phone || '',
+          phone_country: phoneCountry || 'BR',
+          referred_by_code: referralCode || undefined,
+        },
+      },
+    });
+    return !error;
+  }, []);
 
-    users.push(newUser);
-    saveAllUsers(users);
-    saveToStorage(STORAGE_KEYS.currentUser, { id: newUser.id, email: newUser.email });
-    loadUserData(newUser.id);
-    return true;
-  }, [loadUserData]);
-
-  const logout = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEYS.currentUser);
-    setState(prev => ({ ...prev, user: null, investments: [], deposits: [], withdrawals: [], commissions: [], profitHistory: [] }));
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
   }, []);
 
   const depositFn = useCallback(async (amount: number, method: 'pix' | 'usdt'): Promise<Deposit | null> => {
     if (!state.user) return null;
 
+    const pixCode = method === 'pix' ? generatePixCode() : undefined;
+    const walletAddress = method === 'usdt' ? generateWalletAddress() : undefined;
+
+    const { data, error } = await supabase.rpc('process_deposit', {
+      p_user_id: state.user.id,
+      p_amount: amount,
+      p_method: method,
+      p_pix_code: pixCode || null,
+      p_wallet_address: walletAddress || null,
+    });
+
+    if (error) {
+      console.error('Deposit error:', error);
+      return null;
+    }
+
     const dep: Deposit = {
-      id: generateId(),
+      id: data as string,
       userId: state.user.id,
       amount,
       method,
       status: 'confirmed',
-      pixCode: method === 'pix' ? generatePixCode() : undefined,
-      walletAddress: method === 'usdt' ? generateWalletAddress() : undefined,
+      pixCode,
+      walletAddress,
       createdAt: Date.now(),
     };
 
-    const deposits = getAllDeposits();
-    deposits.push(dep);
-    saveAllDeposits(deposits);
-
-    // Update user balance
-    const user = { ...state.user, balance: state.user.balance + amount };
-    updateUserInStorage(user);
-
-    // ── 5-Level Commission Distribution ──
-    const allUsers = getAllUsers();
-    const allCommissions = getAllCommissions();
-    let currentUser = allUsers.find(u => u.id === state.user!.id);
-    const visited = new Set<string>([state.user!.id]); // prevent circular loops
-
-    for (let level = 0; level < COMMISSION_LEVELS.length; level++) {
-      if (!currentUser?.referredBy) break;
-
-      // Find referrer by referral code
-      const referrer = allUsers.find(u => u.referralCode === currentUser!.referredBy);
-      if (!referrer || visited.has(referrer.id)) break; // prevent self-referral & loops
-      visited.add(referrer.id);
-
-      const pct = COMMISSION_LEVELS[level];
-      const commission = Number(new Decimal(amount.toString()).mul(pct).div(100).toFixed(8));
-
-      // Create commission record (with deposit_id for dedup)
-      allCommissions.push({
-        id: generateId(),
-        userId: referrer.id,
-        fromUserId: state.user!.id,
-        fromUserName: state.user!.name,
-        level: level + 1,
-        amount: commission,
-        createdAt: Date.now(),
-      });
-
-      // Credit referrer balance
-      referrer.balance = Number(new Decimal(referrer.balance.toString()).plus(commission).toFixed(8));
-      updateUserInStorage(referrer);
-
-      currentUser = referrer;
-    }
-
-    saveAllCommissions(allCommissions);
-    loadUserData(user.id);
-
+    await loadUserData(state.user.id);
     return dep;
   }, [state.user, loadUserData]);
 
   const invest = useCallback(async (amount: number, durationDays: number, returnPercent: number): Promise<boolean> => {
-    if (!state.user || amount <= 0 || state.user.balance < amount - 0.01) return false;
+    if (!state.user || amount <= 0) return false;
 
-    const userInvestments = getAllInvestments().filter(i => i.userId === state.user!.id);
-    const cycleNumber = userInvestments.length + 1;
-    const now = Date.now();
-    const endDate = now + durationDays * 86400000;
+    const { error } = await supabase.rpc('process_invest', {
+      p_user_id: state.user.id,
+      p_amount: amount,
+      p_duration_days: durationDays,
+      p_return_percent: returnPercent,
+    });
 
-    const inv: Investment = {
-      id: generateId(),
-      userId: state.user.id,
-      amount,
-      cycleNumber,
-      durationDays,
-      returnPercent,
-      startDate: now,
-      endDate,
-      status: 'active',
-      profit: amount * (returnPercent / 100),
-    };
+    if (error) {
+      console.error('Invest error:', error);
+      return false;
+    }
 
-    const allInv = getAllInvestments();
-    allInv.push(inv);
-    saveAllInvestments(allInv);
-
-    const user = { ...state.user, balance: state.user.balance - amount, invested: state.user.invested + amount };
-    updateUserInStorage(user);
-    loadUserData(user.id);
+    await loadUserData(state.user.id);
     return true;
   }, [state.user, loadUserData]);
 
   const withdraw = useCallback(async (amount: number, pixName?: string, pixKey?: string, type?: 'profits' | 'commission' | 'pool'): Promise<boolean> => {
-    if (!state.user || state.user.profits < amount || amount <= 0) return false;
+    if (!state.user || amount <= 0) return false;
 
-    const w: Withdrawal = {
-      id: generateId(),
-      userId: state.user.id,
-      amount,
-      pixName: pixName || '',
-      pixKey: pixKey || '',
-      type: type || 'profits',
-      status: 'pending',
-      createdAt: Date.now(),
-    };
+    const { error } = await supabase.rpc('process_withdraw', {
+      p_user_id: state.user.id,
+      p_amount: amount,
+      p_pix_name: pixName || '',
+      p_pix_key: pixKey || '',
+      p_type: type || 'profits',
+    });
 
-    const allW = getAllWithdrawals();
-    allW.push(w);
-    saveAllWithdrawals(allW);
+    if (error) {
+      console.error('Withdraw error:', error);
+      return false;
+    }
 
-    const user = { ...state.user, profits: state.user.profits - amount };
-    updateUserInStorage(user);
-    loadUserData(user.id);
+    await loadUserData(state.user.id);
     return true;
   }, [state.user, loadUserData]);
 
   const redeemCycle = useCallback(async (investmentId: string): Promise<boolean> => {
-    const allInv = getAllInvestments();
-    const inv = allInv.find(i => i.id === investmentId);
-    if (!inv || !state.user || inv.status !== 'completed') return false;
+    if (!state.user) return false;
 
-    const total = inv.amount + inv.profit;
-    inv.status = 'withdrawn';
-    saveAllInvestments(allInv);
+    const { error } = await supabase.rpc('process_redeem', {
+      p_user_id: state.user.id,
+      p_investment_id: investmentId,
+    });
 
-    const user = {
-      ...state.user,
-      balance: state.user.balance + total,
-      invested: Math.max(0, state.user.invested - inv.amount),
-      profits: state.user.profits + inv.profit,
-    };
-    updateUserInStorage(user);
-    loadUserData(user.id);
+    if (error) {
+      console.error('Redeem error:', error);
+      return false;
+    }
+
+    await loadUserData(state.user.id);
     return true;
   }, [state.user, loadUserData]);
 
   const earlyRedeem = useCallback(async (investmentId: string, pixName?: string, pixKey?: string): Promise<boolean> => {
     if (!state.user) return false;
-    const allInv = getAllInvestments();
-    const inv = allInv.find(i => i.id === investmentId);
-    if (!inv || inv.status !== 'active') return false;
 
-    // Early redeem: return only the principal (no profit)
-    inv.status = 'withdrawn';
-    saveAllInvestments(allInv);
+    const { error } = await supabase.rpc('process_early_redeem', {
+      p_user_id: state.user.id,
+      p_investment_id: investmentId,
+      p_pix_name: pixName || '',
+      p_pix_key: pixKey || '',
+    });
 
-    const user = {
-      ...state.user,
-      balance: state.user.balance + inv.amount,
-      invested: Math.max(0, state.user.invested - inv.amount),
-    };
-    updateUserInStorage(user);
-    loadUserData(user.id);
+    if (error) {
+      console.error('Early redeem error:', error);
+      return false;
+    }
+
+    await loadUserData(state.user.id);
     return true;
   }, [state.user, loadUserData]);
 
-  const updateUserBalance = useCallback((userId: string, amount: number) => {
-    const users = getAllUsers();
-    const user = users.find(u => u.id === userId);
-    if (!user) return;
-    user.balance = user.balance + amount;
-    saveAllUsers(users);
-    if (state.user) loadUserData(state.user.id);
+  const updateUserBalance = useCallback(async (userId: string, amount: number) => {
+    const { error } = await supabase.rpc('admin_update_balance', {
+      p_target_user_id: userId,
+      p_amount: amount,
+    });
+
+    if (error) {
+      console.error('Admin balance update error:', error);
+      return;
+    }
+
+    if (state.user) await loadUserData(state.user.id);
   }, [state.user, loadUserData]);
 
   const updateUserName = useCallback(async (newName: string) => {
     if (!state.user) return;
-    const user = { ...state.user, name: newName };
-    updateUserInStorage(user);
-    loadUserData(user.id);
+    await supabase
+      .from('profiles')
+      .update({ name: newName })
+      .eq('user_id', state.user.id);
+    await loadUserData(state.user.id);
   }, [state.user, loadUserData]);
 
   const refreshData = useCallback(async () => {
-    if (state.user) loadUserData(state.user.id);
-  }, [state.user, loadUserData]);
+    if (currentUserIdRef.current) {
+      await loadUserData(currentUserIdRef.current);
+    }
+  }, [loadUserData]);
 
   const loyaltyDays = state.user
     ? Math.min(7, Math.floor((Date.now() - state.user.createdAt) / 86400000))

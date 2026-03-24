@@ -61,7 +61,7 @@ export default function AuthPage() {
           toast.success('Conta criada com sucesso!');
           navigate('/dashboard');
         } else {
-          toast.error('Email já cadastrado');
+          toast.error('Email já cadastrado ou erro no servidor');
         }
       }
     } catch {
