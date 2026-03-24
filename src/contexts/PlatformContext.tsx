@@ -144,9 +144,9 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       const returnDec = new Decimal(inv.returnPercent.toString()).div(100);
       const amountDec = new Decimal(inv.amount.toString());
       const totalProfit = amountDec.mul(returnDec);
-      const profitPer30s = totalProfit.div(new Decimal(totalSeconds).div(30));
+      const profitPerInterval = totalProfit.div(new Decimal(totalSeconds).div(300));
 
-      const gross = profitPer30s;
+      const gross = profitPerInterval;
       const pool = gross.mul(POOL_FEE);
       const net = gross.minus(pool);
 
@@ -175,7 +175,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (state.user) {
       if (yieldIntervalRef.current) clearInterval(yieldIntervalRef.current);
-      yieldIntervalRef.current = setInterval(generateYields, 30000);
+      yieldIntervalRef.current = setInterval(generateYields, 300000);
       // Generate immediately on login
       setTimeout(generateYields, 1000);
     } else {
