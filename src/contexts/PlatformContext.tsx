@@ -171,23 +171,17 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     loadUserData(userId);
   }, [loadUserData]);
 
-  // Start/stop yield interval
+  // Start/stop yield interval — PAUSED
   useEffect(() => {
-    if (state.user) {
-      if (yieldIntervalRef.current) clearInterval(yieldIntervalRef.current);
-      yieldIntervalRef.current = setInterval(generateYields, 30000);
-      // Generate immediately on login
-      setTimeout(generateYields, 1000);
-    } else {
-      if (yieldIntervalRef.current) {
-        clearInterval(yieldIntervalRef.current);
-        yieldIntervalRef.current = null;
-      }
+    // Yield generation is currently PAUSED
+    if (yieldIntervalRef.current) {
+      clearInterval(yieldIntervalRef.current);
+      yieldIntervalRef.current = null;
     }
     return () => {
       if (yieldIntervalRef.current) clearInterval(yieldIntervalRef.current);
     };
-  }, [state.user?.id, generateYields]);
+  }, [state.user?.id]);
 
   // Init: check for saved session
   useEffect(() => {
