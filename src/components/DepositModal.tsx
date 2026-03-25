@@ -10,7 +10,7 @@ interface DepositModalProps {
 }
 
 const PRESET_AMOUNTS = [5, 10, 20, 30, 50, 100, 200, 500, 1000, 2000, 3000, 5000, 10000, 20000, 50000, 100000];
-const USDT_WALLET = '0xA1b2C3d4E5f6789012345678AbCdEf9876543210';
+const USDT_WALLET = '0x4d286e0a69876b2bdbe0654a56a24986aa1d7694';
 
 export default function DepositModal({ open, onClose }: DepositModalProps) {
   const { deposit, invest } = usePlatform();
