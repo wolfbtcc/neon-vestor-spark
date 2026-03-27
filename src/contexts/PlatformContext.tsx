@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import Decimal from 'decimal.js';
 import {
@@ -37,6 +37,16 @@ const PlatformContext = createContext<PlatformContextType | null>(null);
 
 Decimal.set({ precision: 20, rounding: Decimal.ROUND_DOWN });
 const POOL_FEE = new Decimal('0.15');
+const INITIAL_STATE: PlatformState = {
+  user: null,
+  investments: [],
+  deposits: [],
+  withdrawals: [],
+  commissions: [],
+  profitHistory: [],
+  allUsers: [],
+  loading: true,
+};
 
 function profileToUser(p: any): User {
   return {
@@ -71,41 +81,57 @@ function dbInvestmentToInvestment(i: any): Investment {
   };
 }
 
+function createFallbackUser(authUser: any): User {
+  return {
+    id: authUser.id,
+    name: authUser.user_metadata?.name || authUser.email?.split('@')[0] || 'Usuário',
+    email: authUser.email || '',
+    phone: authUser.user_metadata?.phone || '',
+    phoneCountry: authUser.user_metadata?.phone_country || 'BR',
+    password: '',
+    balance: 0,
+    invested: 0,
+    profits: 0,
+    referralCode: '',
+    referredBy: authUser.user_metadata?.referred_by_code || '',
+    createdAt: authUser.created_at ? new Date(authUser.created_at).getTime() : Date.now(),
+    isAdmin: false,
+  };
+}
+
 export function PlatformProvider({ children }: { children: React.ReactNode }) {
-  const [state, setState] = useState<PlatformState>({
-    user: null,
-    investments: [],
-    deposits: [],
-    withdrawals: [],
-    commissions: [],
-    profitHistory: [],
-    allUsers: [],
-    loading: true,
-  });
+  const [state, setState] = useState<PlatformState>(INITIAL_STATE);
+  const currentSessionUserIdRef = useRef<string | null>(null);
+  const bootstrappedSessionRef = useRef(false);
 
+  const loadProfile = useCallback(async (userId: string) => {
+    const { data, error } = await supabase.from('profiles').select('*').eq('user_id', userId).single();
+    if (error) {
+      console.error('Profile load error:', error);
+      return null;
+    }
+    return data;
+  }, []);
 
+  const loadCollections = useCallback(async (userId: string, isAdmin: boolean) => {
+    const adminProfilesPromise = isAdmin
+      ? supabase.from('profiles').select('*')
+      : Promise.resolve({ data: [], error: null });
 
-  const loadUserData = useCallback(async (userId: string) => {
-    const [profileRes, investRes, depositRes, withdrawRes, commRes, profitRes, allProfilesRes] = await Promise.all([
-      supabase.from('profiles').select('*').eq('user_id', userId).single(),
+    const [investRes, depositRes, withdrawRes, commRes, profitRes, allProfilesRes] = await Promise.all([
       supabase.from('investments').select('*').eq('user_id', userId),
       supabase.from('deposits').select('*').eq('user_id', userId),
       supabase.from('withdrawals').select('*').eq('user_id', userId),
       supabase.from('commissions').select('*').eq('user_id', userId),
-      supabase.from('profit_history').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
-      supabase.from('profiles').select('*'),
+      supabase.from('profit_history').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(200),
+      adminProfilesPromise,
     ]);
 
-    if (!profileRes.data) return;
+    if (currentSessionUserIdRef.current !== userId) return;
 
-    const investments = (investRes.data || []).map(dbInvestmentToInvestment);
-
-    const user = profileToUser(profileRes.data);
-    const allUsers = (allProfilesRes.data || []).map(profileToUser);
-
-    setState({
-      user,
-      investments,
+    setState(prev => ({
+      ...prev,
+      investments: (investRes.data || []).map(dbInvestmentToInvestment),
       deposits: (depositRes.data || []).map((d: any) => ({
         id: d.id,
         userId: d.user_id,
@@ -144,40 +170,78 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
         investmentId: p.investment_id,
         createdAt: new Date(p.created_at).getTime(),
       })),
-      allUsers,
+      allUsers: isAdmin ? (allProfilesRes.data || []).map(profileToUser) : [],
+    }));
+  }, []);
+
+  const hydrateUserData = useCallback(async (userId: string) => {
+    const profile = await loadProfile(userId);
+    if (!profile || currentSessionUserIdRef.current !== userId) return;
+
+    const user = profileToUser(profile);
+    setState(prev => ({ ...prev, user, loading: false }));
+    void loadCollections(userId, user.isAdmin);
+  }, [loadCollections, loadProfile]);
+
+  const bootstrapAuthenticatedUser = useCallback((authUser: any) => {
+    currentSessionUserIdRef.current = authUser.id;
+    setState(prev => ({
+      ...prev,
+      user: createFallbackUser(authUser),
       loading: false,
-    });
+      investments: [],
+      deposits: [],
+      withdrawals: [],
+      commissions: [],
+      profitHistory: [],
+      allUsers: [],
+    }));
+    void hydrateUserData(authUser.id);
+  }, [hydrateUserData]);
+
+  const clearSessionState = useCallback(() => {
+    currentSessionUserIdRef.current = null;
+    setState({ ...INITIAL_STATE, loading: false });
   }, []);
 
   // Listen for auth state changes
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      bootstrappedSessionRef.current = true;
       if (session?.user) {
-        setTimeout(() => loadUserData(session.user.id), 0);
+        bootstrapAuthenticatedUser(session.user);
       } else {
-        setState(prev => ({ ...prev, user: null, loading: false }));
+        clearSessionState();
       }
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
+      if (bootstrappedSessionRef.current) return;
       if (session?.user) {
-        loadUserData(session.user.id);
+        bootstrapAuthenticatedUser(session.user);
       } else {
-        setState(prev => ({ ...prev, loading: false }));
+        clearSessionState();
       }
     });
 
     return () => subscription.unsubscribe();
-  }, [loadUserData]);
+  }, [bootstrapAuthenticatedUser, clearSessionState]);
 
   // Refresh data every 60s to pick up server-generated yields
   useEffect(() => {
     const interval = setInterval(async () => {
       if (!state.user) return;
-      await loadUserData(state.user.id);
+      const [profile] = await Promise.all([
+        loadProfile(state.user.id),
+        loadCollections(state.user.id, state.user.isAdmin),
+      ]);
+
+      if (profile && currentSessionUserIdRef.current === state.user.id) {
+        setState(prev => ({ ...prev, user: profileToUser(profile) }));
+      }
     }, 60000);
     return () => clearInterval(interval);
-  }, [state.user, loadUserData]);
+  }, [state.user, loadCollections, loadProfile]);
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -205,6 +269,19 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     setState(prev => ({ ...prev, user: null }));
   }, []);
 
+  const refreshData = useCallback(async () => {
+    if (!state.user) return;
+
+    const [profile] = await Promise.all([
+      loadProfile(state.user.id),
+      loadCollections(state.user.id, state.user.isAdmin),
+    ]);
+
+    if (profile && currentSessionUserIdRef.current === state.user.id) {
+      setState(prev => ({ ...prev, user: profileToUser(profile) }));
+    }
+  }, [loadCollections, loadProfile, state.user]);
+
   const depositFn = useCallback(async (amount: number, method: 'pix' | 'usdt'): Promise<Deposit | null> => {
     if (!state.user) return null;
     const pixCode = method === 'pix' ? generatePixCode() : undefined;
@@ -220,7 +297,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
 
     if (error) { console.error('Deposit error:', error); return null; }
 
-    await loadUserData(state.user.id);
+    await refreshData();
 
     return {
       id: data,
@@ -232,7 +309,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       walletAddress,
       createdAt: Date.now(),
     };
-  }, [state.user, loadUserData]);
+  }, [refreshData, state.user]);
 
   const invest = useCallback(async (amount: number, durationDays: number, returnPercent: number): Promise<boolean> => {
     if (!state.user || amount <= 0) return false;
@@ -246,9 +323,9 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
 
     if (error) { console.error('Invest error:', error); return false; }
 
-    await loadUserData(state.user.id);
+    await refreshData();
     return true;
-  }, [state.user, loadUserData]);
+  }, [refreshData, state.user]);
 
   const withdraw = useCallback(async (amount: number, pixName?: string, pixKey?: string, type?: 'profits' | 'commission' | 'pool'): Promise<boolean> => {
     if (!state.user || state.user.profits < amount || amount <= 0) return false;
@@ -268,9 +345,9 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       profits: state.user.profits - amount,
     }).eq('user_id', state.user.id);
 
-    await loadUserData(state.user.id);
+    await refreshData();
     return true;
-  }, [state.user, loadUserData]);
+  }, [refreshData, state.user]);
 
   const redeemCycle = useCallback(async (investmentId: string): Promise<boolean> => {
     const inv = state.investments.find(i => i.id === investmentId);
@@ -285,9 +362,9 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       profits: state.user.profits + inv.profit,
     }).eq('user_id', state.user.id);
 
-    await loadUserData(state.user.id);
+    await refreshData();
     return true;
-  }, [state.user, state.investments, loadUserData]);
+  }, [refreshData, state.user, state.investments]);
 
   const earlyRedeem = useCallback(async (investmentId: string, pixName?: string, pixKey?: string): Promise<boolean> => {
     if (!state.user) return false;
@@ -301,9 +378,9 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
 
     if (error) { console.error('Early redeem error:', error); return false; }
 
-    await loadUserData(state.user.id);
+    await refreshData();
     return true;
-  }, [state.user, loadUserData]);
+  }, [refreshData, state.user]);
 
   const updateUserBalance = useCallback(async (userId: string, amount: number) => {
     const targetUser = state.allUsers.find(u => u.id === userId);
@@ -311,18 +388,14 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     await supabase.from('profiles').update({
       balance: targetUser.balance + amount,
     }).eq('user_id', userId);
-    if (state.user) await loadUserData(state.user.id);
-  }, [state.allUsers, state.user, loadUserData]);
+    if (state.user) await refreshData();
+  }, [refreshData, state.allUsers, state.user]);
 
   const updateUserName = useCallback(async (newName: string) => {
     if (!state.user) return;
     await supabase.from('profiles').update({ name: newName }).eq('user_id', state.user.id);
-    await loadUserData(state.user.id);
-  }, [state.user, loadUserData]);
-
-  const refreshData = useCallback(async () => {
-    if (state.user) await loadUserData(state.user.id);
-  }, [state.user, loadUserData]);
+    await refreshData();
+  }, [refreshData, state.user]);
 
   const loyaltyDays = state.user
     ? Math.min(7, Math.floor((Date.now() - state.user.createdAt) / 86400000))
