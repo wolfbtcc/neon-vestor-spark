@@ -475,7 +475,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
   }, [state.user, loadUserData]);
 
   const refreshData = useCallback(async () => {
-    generateDailyYields();
+    generateHourlyYields();
     if (state.user) loadUserData(state.user.id);
   }, [state.user, loadUserData]);
 
