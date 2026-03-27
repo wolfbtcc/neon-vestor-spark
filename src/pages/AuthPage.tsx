@@ -57,7 +57,7 @@ export default function AuthPage() {
           return;
         }
         const fullPhone = `${selectedCountry.dial} ${phone}`;
-        const success = await Promise.race([register(name, email, password, refCode, fullPhone, selectedCountry.code), timeout(15000)]) as boolean;
+        const success = await Promise.race([register(name, email, password, refCode, fullPhone, selectedCountry.code), timeout(20000)]) as boolean;
         if (success) {
           toast.success('Conta criada com sucesso!');
           navigate('/dashboard');
