@@ -239,7 +239,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       if (profile && currentSessionUserIdRef.current === state.user.id) {
         setState(prev => ({ ...prev, user: profileToUser(profile) }));
       }
-    }, 60000);
+    }, 300000); // Refresh every 5 minutes (yields update hourly)
     return () => clearInterval(interval);
   }, [state.user, loadCollections, loadProfile]);
 
