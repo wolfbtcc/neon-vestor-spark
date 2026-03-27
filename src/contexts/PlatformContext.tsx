@@ -1,10 +1,8 @@
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
-import type { User as AuthUser } from '@supabase/supabase-js';
-import { supabase } from '@/integrations/supabase/client';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
 import Decimal from 'decimal.js';
 import {
   User, Investment, Deposit, Withdrawal, Commission, ProfitEntry,
-  generatePixCode, generateWalletAddress,
+  generateId, generateReferralCode, generatePixCode, generateWalletAddress,
   COMMISSION_LEVELS,
 } from '@/lib/platform';
 
@@ -39,73 +37,106 @@ const PlatformContext = createContext<PlatformContextType | null>(null);
 Decimal.set({ precision: 20, rounding: Decimal.ROUND_DOWN });
 const POOL_FEE = new Decimal('0.15');
 
-function clearStaleAuthStorage() {
-  if (typeof window === 'undefined') return;
+// ── localStorage helpers ──────────────────────────────────────────
 
-  const authKeys = Object.keys(window.localStorage).filter(
-    (key) => key.includes('supabase.auth.token') || key.includes('-auth-token')
-  );
+const STORAGE_KEYS = {
+  users: 'vortex_users',
+  investments: 'vortex_investments',
+  deposits: 'vortex_deposits',
+  withdrawals: 'vortex_withdrawals',
+  commissions: 'vortex_commissions',
+  profitHistory: 'vortex_profit_history',
+  currentUser: 'vortex_current_user',
+  lastYieldRun: 'vortex_last_yield_run',
+};
 
-  authKeys.forEach((key) => window.localStorage.removeItem(key));
+function loadJSON<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
 }
 
-function isRecoverableAuthError(error: unknown) {
-  if (!(error instanceof Error)) return false;
-  return error.message.includes('Failed to fetch') || error.name.includes('AuthRetryableFetchError');
+function saveJSON(key: string, value: unknown) {
+  localStorage.setItem(key, JSON.stringify(value));
 }
 
-function authUserToFallbackUser(authUser: AuthUser): User {
-  const metadata = authUser.user_metadata ?? {};
+// ── Daily yield generation at 12:00 ──────────────────────────────
 
-  return {
-    id: authUser.id,
-    name: metadata.name || authUser.email?.split('@')[0] || 'Usuário',
-    email: authUser.email || '',
-    phone: metadata.phone || '',
-    phoneCountry: metadata.phone_country || 'BR',
-    password: '',
-    balance: 0,
-    invested: 0,
-    profits: 0,
-    referralCode: metadata.referral_code || '',
-    referredBy: metadata.referred_by_code || '',
-    createdAt: authUser.created_at ? new Date(authUser.created_at).getTime() : Date.now(),
-    isAdmin: false,
-  };
+function generateDailyYields() {
+  const now = new Date();
+  const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
+  const lastRun = localStorage.getItem(STORAGE_KEYS.lastYieldRun);
+
+  // Only run if it's 12:00+ and hasn't run today
+  if (now.getHours() < 12) return;
+  if (lastRun === todayKey) return;
+
+  const investments: Investment[] = loadJSON(STORAGE_KEYS.investments, []);
+  const users: User[] = loadJSON(STORAGE_KEYS.users, []);
+  let profitHistory: ProfitEntry[] = loadJSON(STORAGE_KEYS.profitHistory, []);
+
+  const nowMs = Date.now();
+  const userUpdates: Record<string, { profits: number; balance: number }> = {};
+
+  for (const inv of investments) {
+    if (inv.status !== 'active') continue;
+
+    // Check if investment has ended
+    if (nowMs >= inv.endDate) {
+      inv.status = 'completed';
+      continue;
+    }
+
+    const amount = new Decimal(inv.amount);
+    const returnPct = new Decimal(inv.returnPercent);
+    const totalProfit = amount.mul(returnPct).div(100);
+    const dailyProfit = totalProfit.div(inv.durationDays);
+    const poolFee = dailyProfit.mul(POOL_FEE);
+    const netProfit = dailyProfit.minus(poolFee);
+
+    const entry: ProfitEntry = {
+      id: generateId(),
+      userId: inv.userId,
+      amount: dailyProfit.toNumber(),
+      fee: poolFee.toNumber(),
+      net: netProfit.toNumber(),
+      investmentId: inv.id,
+      createdAt: nowMs,
+    };
+
+    profitHistory.unshift(entry);
+    inv.profit += netProfit.toNumber();
+
+    if (!userUpdates[inv.userId]) {
+      const user = users.find(u => u.id === inv.userId);
+      userUpdates[inv.userId] = {
+        profits: user?.profits || 0,
+        balance: user?.balance || 0,
+      };
+    }
+    userUpdates[inv.userId].profits += netProfit.toNumber();
+    userUpdates[inv.userId].balance += netProfit.toNumber();
+  }
+
+  // Apply user updates
+  for (const [userId, upd] of Object.entries(userUpdates)) {
+    const user = users.find(u => u.id === userId);
+    if (user) {
+      user.profits = upd.profits;
+      user.balance = upd.balance;
+    }
+  }
+
+  saveJSON(STORAGE_KEYS.investments, investments);
+  saveJSON(STORAGE_KEYS.profitHistory, profitHistory);
+  saveJSON(STORAGE_KEYS.users, users);
+  localStorage.setItem(STORAGE_KEYS.lastYieldRun, todayKey);
 }
 
-function profileToUser(p: any): User {
-  return {
-    id: p.user_id,
-    name: p.name,
-    email: p.email,
-    phone: p.phone,
-    phoneCountry: p.phone_country,
-    password: '',
-    balance: Number(p.balance),
-    invested: Number(p.invested),
-    profits: Number(p.profits),
-    referralCode: p.referral_code,
-    referredBy: p.referred_by,
-    createdAt: new Date(p.created_at).getTime(),
-    isAdmin: p.is_admin,
-  };
-}
-
-function dbInvestmentToInvestment(i: any): Investment {
-  return {
-    id: i.id,
-    userId: i.user_id,
-    amount: Number(i.amount),
-    cycleNumber: i.cycle_number,
-    durationDays: i.duration_days,
-    returnPercent: Number(i.return_percent),
-    startDate: new Date(i.start_date).getTime(),
-    endDate: new Date(i.end_date).getTime(),
-    status: i.status as 'active' | 'completed' | 'withdrawn',
-    profit: Number(i.profit),
-  };
-}
+// ── Provider ─────────────────────────────────────────────────────
 
 export function PlatformProvider({ children }: { children: React.ReactNode }) {
   const [state, setState] = useState<PlatformState>({
@@ -119,226 +150,107 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     loading: true,
   });
 
-
-
-  const loadUserData = useCallback(async (userId: string, authUser?: AuthUser) => {
-    setState(prev => ({ ...prev, loading: true }));
-
-    try {
-      let profileRes = await supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle();
-
-      if (!profileRes.data && authUser) {
-        const fallbackUser = authUserToFallbackUser(authUser);
-
-        await supabase.from('profiles').upsert({
-          user_id: fallbackUser.id,
-          name: fallbackUser.name,
-          email: fallbackUser.email,
-          phone: fallbackUser.phone,
-          phone_country: fallbackUser.phoneCountry,
-          referred_by: fallbackUser.referredBy || null,
-          balance: 0,
-          invested: 0,
-          profits: 0,
-        }, { onConflict: 'user_id' });
-
-        profileRes = await supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle();
-      }
-
-      if (!profileRes.data) {
-        const fallbackUser = authUser ? authUserToFallbackUser(authUser) : state.user;
-
-        setState({
-          user: fallbackUser,
-          investments: [],
-          deposits: [],
-          withdrawals: [],
-          commissions: [],
-          profitHistory: [],
-          allUsers: fallbackUser ? [fallbackUser] : [],
-          loading: false,
-        });
-        return;
-      }
-
-      const profile = profileRes.data;
-      const [investRes, depositRes, withdrawRes, commRes, profitRes, allProfilesRes] = await Promise.all([
-        supabase.from('investments').select('*').eq('user_id', userId),
-        supabase.from('deposits').select('*').eq('user_id', userId),
-        supabase.from('withdrawals').select('*').eq('user_id', userId),
-        supabase.from('commissions').select('*').eq('user_id', userId),
-        supabase.from('profit_history').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(200),
-        profile.is_admin ? supabase.from('profiles').select('*') : Promise.resolve({ data: [profile] }),
-      ]);
-
-      const investments = (investRes.data || []).map(dbInvestmentToInvestment);
-      const user = profileToUser(profile);
-      const allUsers = (allProfilesRes.data || [profile]).map(profileToUser);
-
-      setState({
-        user,
-        investments,
-        deposits: (depositRes.data || []).map((d: any) => ({
-          id: d.id,
-          userId: d.user_id,
-          amount: Number(d.amount),
-          method: d.method as 'pix' | 'usdt',
-          status: d.status as 'pending' | 'confirmed',
-          pixCode: d.pix_code || undefined,
-          walletAddress: d.wallet_address || undefined,
-          createdAt: new Date(d.created_at).getTime(),
-        })),
-        withdrawals: (withdrawRes.data || []).map((w: any) => ({
-          id: w.id,
-          userId: w.user_id,
-          amount: Number(w.amount),
-          pixName: w.pix_name,
-          pixKey: w.pix_key,
-          type: w.type as 'profits' | 'commission' | 'pool',
-          status: w.status as 'pending' | 'completed',
-          createdAt: new Date(w.created_at).getTime(),
-        })),
-        commissions: (commRes.data || []).map((c: any) => ({
-          id: c.id,
-          userId: c.user_id,
-          fromUserId: c.from_user_id,
-          fromUserName: c.from_user_name,
-          level: c.level,
-          amount: Number(c.amount),
-          createdAt: new Date(c.created_at).getTime(),
-        })),
-        profitHistory: (profitRes.data || []).map((p: any) => ({
-          id: p.id,
-          userId: p.user_id,
-          amount: Number(p.amount),
-          fee: Number(p.fee),
-          net: Number(p.net),
-          investmentId: p.investment_id,
-          createdAt: new Date(p.created_at).getTime(),
-        })),
-        allUsers,
-        loading: false,
-      });
-    } catch (error) {
-      console.error('Load user data error:', error);
-      setState(prev => ({
-        ...prev,
-        user: prev.user || (authUser ? authUserToFallbackUser(authUser) : null),
-        loading: false,
-      }));
+  const loadUserData = useCallback((userId: string) => {
+    const users: User[] = loadJSON(STORAGE_KEYS.users, []);
+    const user = users.find(u => u.id === userId) || null;
+    if (!user) {
+      setState(prev => ({ ...prev, user: null, loading: false }));
+      return;
     }
+
+    const investments: Investment[] = loadJSON(STORAGE_KEYS.investments, []).filter((i: Investment) => i.userId === userId);
+    const deposits: Deposit[] = loadJSON(STORAGE_KEYS.deposits, []).filter((d: Deposit) => d.userId === userId);
+    const withdrawals: Withdrawal[] = loadJSON(STORAGE_KEYS.withdrawals, []).filter((w: Withdrawal) => w.userId === userId);
+    const commissions: Commission[] = loadJSON(STORAGE_KEYS.commissions, []).filter((c: Commission) => c.userId === userId);
+    const allProfitHistory: ProfitEntry[] = loadJSON(STORAGE_KEYS.profitHistory, []);
+    const profitHistory = allProfitHistory.filter((p: ProfitEntry) => p.userId === userId).slice(0, 200);
+
+    const allUsers = user.isAdmin ? users : [user];
+
+    setState({
+      user,
+      investments,
+      deposits,
+      withdrawals,
+      commissions,
+      profitHistory,
+      allUsers,
+      loading: false,
+    });
   }, []);
 
-  // Listen for auth state changes
+  // On mount: run yield generation, then restore session
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session?.user) {
-        setTimeout(() => {
-          void loadUserData(session.user.id, session.user);
-        }, 0);
-      } else {
-        setState(prev => ({ ...prev, user: null, loading: false }));
-      }
-    });
-
-    void supabase.auth.getSession().then(({ data: { session }, error }) => {
-      if (error && isRecoverableAuthError(error)) {
-        clearStaleAuthStorage();
-        setState(prev => ({ ...prev, loading: false }));
-        return;
-      }
-
-      if (session?.user) {
-        void loadUserData(session.user.id, session.user);
-      } else {
-        clearStaleAuthStorage();
-        setState(prev => ({ ...prev, user: null, loading: false }));
-      }
-    }).catch(() => {
-      clearStaleAuthStorage();
-      setState(prev => ({ ...prev, user: null, loading: false }));
-    });
-
-    return () => subscription.unsubscribe();
+    generateDailyYields();
+    const currentUserId = localStorage.getItem(STORAGE_KEYS.currentUser);
+    if (currentUserId) {
+      loadUserData(currentUserId);
+    } else {
+      setState(prev => ({ ...prev, loading: false }));
+    }
   }, [loadUserData]);
 
-  // Refresh data every 60s to pick up server-generated yields
+  // Check for yield generation periodically (every 5 min)
   useEffect(() => {
-    const interval = setInterval(async () => {
-      if (!state.user) return;
-      await loadUserData(state.user.id);
-    }, 60000);
+    const interval = setInterval(() => {
+      generateDailyYields();
+      if (state.user) loadUserData(state.user.id);
+    }, 300000);
     return () => clearInterval(interval);
   }, [state.user, loadUserData]);
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
-    let { error } = await supabase.auth.signInWithPassword({ email, password });
+    const users: User[] = loadJSON(STORAGE_KEYS.users, []);
+    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === password);
+    if (!user) return false;
 
-    if (error && isRecoverableAuthError(error)) {
-      clearStaleAuthStorage();
-      ({ error } = await supabase.auth.signInWithPassword({ email, password }));
-    }
-
-    return !error;
-  }, []);
+    localStorage.setItem(STORAGE_KEYS.currentUser, user.id);
+    loadUserData(user.id);
+    return true;
+  }, [loadUserData]);
 
   const register = useCallback(async (name: string, email: string, password: string, referralCode?: string, phone?: string, phoneCountry?: string): Promise<boolean> => {
-    let { error } = await supabase.auth.signUp({
+    const users: User[] = loadJSON(STORAGE_KEYS.users, []);
+    if (users.find(u => u.email.toLowerCase() === email.toLowerCase())) return false;
+
+    const newUser: User = {
+      id: generateId(),
+      name,
       email,
+      phone: phone || '',
+      phoneCountry: phoneCountry || 'BR',
       password,
-      options: {
-        data: {
-          name,
-          phone: phone || '',
-          phone_country: phoneCountry || 'BR',
-          referred_by_code: referralCode || '',
-        },
-      },
-    });
+      balance: 0,
+      invested: 0,
+      profits: 0,
+      referralCode: generateReferralCode(),
+      referredBy: referralCode || null,
+      createdAt: Date.now(),
+      isAdmin: false,
+    };
 
-    if (error && isRecoverableAuthError(error)) {
-      clearStaleAuthStorage();
-      ({ error } = await supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            name,
-            phone: phone || '',
-            phone_country: phoneCountry || 'BR',
-            referred_by_code: referralCode || '',
-          },
-        },
-      }));
-    }
+    users.push(newUser);
+    saveJSON(STORAGE_KEYS.users, users);
+    localStorage.setItem(STORAGE_KEYS.currentUser, newUser.id);
 
-    return !error;
-  }, []);
+    // Process referral commissions later on first investment
+    loadUserData(newUser.id);
+    return true;
+  }, [loadUserData]);
 
-  const logout = useCallback(async () => {
-    await supabase.auth.signOut();
-    setState(prev => ({ ...prev, user: null }));
+  const logout = useCallback(() => {
+    localStorage.removeItem(STORAGE_KEYS.currentUser);
+    setState(prev => ({ ...prev, user: null, investments: [], deposits: [], withdrawals: [], commissions: [], profitHistory: [], allUsers: [] }));
   }, []);
 
   const depositFn = useCallback(async (amount: number, method: 'pix' | 'usdt'): Promise<Deposit | null> => {
     if (!state.user) return null;
+
     const pixCode = method === 'pix' ? generatePixCode() : undefined;
     const walletAddress = method === 'usdt' ? generateWalletAddress() : undefined;
 
-    const { data, error } = await supabase.rpc('process_deposit', {
-      p_user_id: state.user.id,
-      p_amount: amount,
-      p_method: method,
-      p_pix_code: pixCode || null,
-      p_wallet_address: walletAddress || null,
-    });
-
-    if (error) { console.error('Deposit error:', error); return null; }
-
-    await loadUserData(state.user.id);
-
-    return {
-      id: data,
+    const dep: Deposit = {
+      id: generateId(),
       userId: state.user.id,
       amount,
       method,
@@ -347,96 +259,201 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       walletAddress,
       createdAt: Date.now(),
     };
+
+    const deposits: Deposit[] = loadJSON(STORAGE_KEYS.deposits, []);
+    deposits.push(dep);
+    saveJSON(STORAGE_KEYS.deposits, deposits);
+
+    // Update user balance
+    const users: User[] = loadJSON(STORAGE_KEYS.users, []);
+    const user = users.find(u => u.id === state.user!.id);
+    if (user) {
+      user.balance += amount;
+      saveJSON(STORAGE_KEYS.users, users);
+    }
+
+    loadUserData(state.user.id);
+    return dep;
   }, [state.user, loadUserData]);
 
   const invest = useCallback(async (amount: number, durationDays: number, returnPercent: number): Promise<boolean> => {
-    if (!state.user || amount <= 0) return false;
+    if (!state.user || amount <= 0 || state.user.balance < amount) return false;
 
-    const { error } = await supabase.rpc('process_invest', {
-      p_user_id: state.user.id,
-      p_amount: amount,
-      p_duration_days: durationDays,
-      p_return_percent: returnPercent,
-    });
+    const now = Date.now();
+    const inv: Investment = {
+      id: generateId(),
+      userId: state.user.id,
+      amount,
+      cycleNumber: 1,
+      durationDays,
+      returnPercent,
+      startDate: now,
+      endDate: now + durationDays * 86400000,
+      status: 'active',
+      profit: 0,
+    };
 
-    if (error) { console.error('Invest error:', error); return false; }
+    const investments: Investment[] = loadJSON(STORAGE_KEYS.investments, []);
+    investments.push(inv);
+    saveJSON(STORAGE_KEYS.investments, investments);
 
-    await loadUserData(state.user.id);
+    // Deduct balance
+    const users: User[] = loadJSON(STORAGE_KEYS.users, []);
+    const user = users.find(u => u.id === state.user!.id);
+    if (user) {
+      user.balance -= amount;
+      user.invested += amount;
+      saveJSON(STORAGE_KEYS.users, users);
+    }
+
+    // Process referral commissions
+    if (state.user.referredBy) {
+      const allUsers: User[] = loadJSON(STORAGE_KEYS.users, []);
+      let referrerCode = state.user.referredBy;
+      const commissions: Commission[] = loadJSON(STORAGE_KEYS.commissions, []);
+
+      for (let level = 0; level < COMMISSION_LEVELS.length && referrerCode; level++) {
+        const referrer = allUsers.find(u => u.referralCode === referrerCode);
+        if (!referrer) break;
+
+        const commAmount = amount * (COMMISSION_LEVELS[level] / 100);
+        const comm: Commission = {
+          id: generateId(),
+          userId: referrer.id,
+          fromUserId: state.user.id,
+          fromUserName: state.user.name,
+          level: level + 1,
+          amount: commAmount,
+          createdAt: Date.now(),
+        };
+        commissions.push(comm);
+        referrer.balance += commAmount;
+
+        referrerCode = referrer.referredBy;
+      }
+
+      saveJSON(STORAGE_KEYS.commissions, commissions);
+      saveJSON(STORAGE_KEYS.users, allUsers);
+    }
+
+    loadUserData(state.user.id);
     return true;
   }, [state.user, loadUserData]);
 
   const withdraw = useCallback(async (amount: number, pixName?: string, pixKey?: string, type?: 'profits' | 'commission' | 'pool'): Promise<boolean> => {
     if (!state.user || state.user.profits < amount || amount <= 0) return false;
 
-    const { error } = await supabase.from('withdrawals').insert({
-      user_id: state.user.id,
+    const w: Withdrawal = {
+      id: generateId(),
+      userId: state.user.id,
       amount,
-      pix_name: pixName || '',
-      pix_key: pixKey || '',
+      pixName: pixName || '',
+      pixKey: pixKey || '',
       type: type || 'profits',
       status: 'pending',
-    });
+      createdAt: Date.now(),
+    };
 
-    if (error) { console.error('Withdraw error:', error); return false; }
+    const withdrawals: Withdrawal[] = loadJSON(STORAGE_KEYS.withdrawals, []);
+    withdrawals.push(w);
+    saveJSON(STORAGE_KEYS.withdrawals, withdrawals);
 
-    await supabase.from('profiles').update({
-      profits: state.user.profits - amount,
-    }).eq('user_id', state.user.id);
+    const users: User[] = loadJSON(STORAGE_KEYS.users, []);
+    const user = users.find(u => u.id === state.user!.id);
+    if (user) {
+      user.profits -= amount;
+      saveJSON(STORAGE_KEYS.users, users);
+    }
 
-    await loadUserData(state.user.id);
+    loadUserData(state.user.id);
     return true;
   }, [state.user, loadUserData]);
 
   const redeemCycle = useCallback(async (investmentId: string): Promise<boolean> => {
-    const inv = state.investments.find(i => i.id === investmentId);
+    const investments: Investment[] = loadJSON(STORAGE_KEYS.investments, []);
+    const inv = investments.find(i => i.id === investmentId);
     if (!inv || !state.user || inv.status !== 'completed') return false;
 
     const total = inv.amount + inv.profit;
+    inv.status = 'withdrawn';
+    saveJSON(STORAGE_KEYS.investments, investments);
 
-    await supabase.from('investments').update({ status: 'withdrawn' }).eq('id', investmentId);
-    await supabase.from('profiles').update({
-      balance: state.user.balance + total,
-      invested: Math.max(0, state.user.invested - inv.amount),
-      profits: state.user.profits + inv.profit,
-    }).eq('user_id', state.user.id);
+    const users: User[] = loadJSON(STORAGE_KEYS.users, []);
+    const user = users.find(u => u.id === state.user!.id);
+    if (user) {
+      user.balance += total;
+      user.invested = Math.max(0, user.invested - inv.amount);
+      user.profits += inv.profit;
+      saveJSON(STORAGE_KEYS.users, users);
+    }
 
-    await loadUserData(state.user.id);
+    loadUserData(state.user.id);
     return true;
-  }, [state.user, state.investments, loadUserData]);
+  }, [state.user, loadUserData]);
 
   const earlyRedeem = useCallback(async (investmentId: string, pixName?: string, pixKey?: string): Promise<boolean> => {
     if (!state.user) return false;
 
-    const { error } = await supabase.rpc('process_early_redeem', {
-      p_user_id: state.user.id,
-      p_investment_id: investmentId,
-      p_pix_name: pixName || '',
-      p_pix_key: pixKey || '',
-    });
+    const investments: Investment[] = loadJSON(STORAGE_KEYS.investments, []);
+    const inv = investments.find(i => i.id === investmentId);
+    if (!inv || inv.status !== 'active') return false;
 
-    if (error) { console.error('Early redeem error:', error); return false; }
+    // Early redeem: return only 50% of invested amount
+    const returnAmount = inv.amount * 0.5;
+    inv.status = 'withdrawn';
+    saveJSON(STORAGE_KEYS.investments, investments);
 
-    await loadUserData(state.user.id);
+    const users: User[] = loadJSON(STORAGE_KEYS.users, []);
+    const user = users.find(u => u.id === state.user!.id);
+    if (user) {
+      user.balance += returnAmount;
+      user.invested = Math.max(0, user.invested - inv.amount);
+      saveJSON(STORAGE_KEYS.users, users);
+    }
+
+    // Create withdrawal record
+    const w: Withdrawal = {
+      id: generateId(),
+      userId: state.user.id,
+      amount: returnAmount,
+      pixName: pixName || '',
+      pixKey: pixKey || '',
+      type: 'profits',
+      status: 'completed',
+      createdAt: Date.now(),
+    };
+    const withdrawals: Withdrawal[] = loadJSON(STORAGE_KEYS.withdrawals, []);
+    withdrawals.push(w);
+    saveJSON(STORAGE_KEYS.withdrawals, withdrawals);
+
+    loadUserData(state.user.id);
     return true;
   }, [state.user, loadUserData]);
 
-  const updateUserBalance = useCallback(async (userId: string, amount: number) => {
-    const targetUser = state.allUsers.find(u => u.id === userId);
-    if (!targetUser) return;
-    await supabase.from('profiles').update({
-      balance: targetUser.balance + amount,
-    }).eq('user_id', userId);
-    if (state.user) await loadUserData(state.user.id);
-  }, [state.allUsers, state.user, loadUserData]);
+  const updateUserBalance = useCallback((userId: string, amount: number) => {
+    const users: User[] = loadJSON(STORAGE_KEYS.users, []);
+    const user = users.find(u => u.id === userId);
+    if (user) {
+      user.balance += amount;
+      saveJSON(STORAGE_KEYS.users, users);
+    }
+    if (state.user) loadUserData(state.user.id);
+  }, [state.user, loadUserData]);
 
   const updateUserName = useCallback(async (newName: string) => {
     if (!state.user) return;
-    await supabase.from('profiles').update({ name: newName }).eq('user_id', state.user.id);
-    await loadUserData(state.user.id);
+    const users: User[] = loadJSON(STORAGE_KEYS.users, []);
+    const user = users.find(u => u.id === state.user!.id);
+    if (user) {
+      user.name = newName;
+      saveJSON(STORAGE_KEYS.users, users);
+    }
+    loadUserData(state.user.id);
   }, [state.user, loadUserData]);
 
   const refreshData = useCallback(async () => {
-    if (state.user) await loadUserData(state.user.id);
+    generateDailyYields();
+    if (state.user) loadUserData(state.user.id);
   }, [state.user, loadUserData]);
 
   const loyaltyDays = state.user
