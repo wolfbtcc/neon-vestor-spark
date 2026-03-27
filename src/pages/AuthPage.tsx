@@ -38,10 +38,9 @@ export default function AuthPage() {
     if (password.length < 6) { toast.error('Senha deve ter no mínimo 6 caracteres'); return; }
     if (!isLogin && password !== confirmPassword) { toast.error('As senhas não coincidem'); return; }
     setSubmitting(true);
-    const timeout = (ms: number) => new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms));
     try {
       if (isLogin) {
-        const success = await Promise.race([login(email, password), timeout(20000)]) as boolean;
+        const success = await login(email, password);
         if (success) {
           toast.success('Login realizado!');
           navigate('/dashboard');
@@ -57,7 +56,7 @@ export default function AuthPage() {
           return;
         }
         const fullPhone = `${selectedCountry.dial} ${phone}`;
-        const success = await Promise.race([register(name, email, password, refCode, fullPhone, selectedCountry.code), timeout(20000)]) as boolean;
+        const success = await register(name, email, password, refCode, fullPhone, selectedCountry.code);
         if (success) {
           toast.success('Conta criada com sucesso!');
           navigate('/dashboard');
@@ -65,12 +64,8 @@ export default function AuthPage() {
           toast.error('Email já cadastrado');
         }
       }
-    } catch (err: any) {
-      if (err?.message === 'timeout') {
-        toast.error('Servidor indisponível. Tente novamente em alguns minutos.');
-      } else {
-        toast.error('Erro ao processar. Tente novamente.');
-      }
+    } catch (err) {
+      toast.error('Erro ao processar. Tente novamente.');
     } finally {
       setSubmitting(false);
     }
