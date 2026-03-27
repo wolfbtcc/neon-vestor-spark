@@ -1,22 +1,4 @@
 export function formatBRL(value: number): string {
-  // For very small values, show more decimal places so profits are visible
-  const absVal = Math.abs(value);
-  if (absVal > 0 && absVal < 0.01) {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 4,
-      maximumFractionDigits: 6,
-    }).format(value);
-  }
-  if (absVal > 0 && absVal < 1) {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 4,
-    }).format(value);
-  }
   return new Intl.NumberFormat('en-US', {
     style: 'currency',
     currency: 'USD',

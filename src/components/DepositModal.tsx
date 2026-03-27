@@ -10,7 +10,7 @@ interface DepositModalProps {
 }
 
 const PRESET_AMOUNTS = [5, 10, 20, 30, 50, 100, 200, 500, 1000, 2000, 3000, 5000, 10000, 20000, 50000, 100000];
-const USDT_WALLET = '0x4d286e0a69876b2bdbe0654a56a24986aa1d7694';
+const USDT_WALLET = '0xA1b2C3d4E5f6789012345678AbCdEf9876543210';
 
 export default function DepositModal({ open, onClose }: DepositModalProps) {
   const { deposit, invest } = usePlatform();
@@ -163,7 +163,7 @@ export default function DepositModal({ open, onClose }: DepositModalProps) {
               </p>
             </div>
             <p className="text-xs text-muted-foreground">Valor: <span className="font-mono-data text-neon-cyan font-bold">{formatBRL(selectedAmount!)}</span></p>
-            <a href="https://wa.link/t91fik" target="_blank" rel="noopener noreferrer"
+            <a href="https://wa.link/mbbixn" target="_blank" rel="noopener noreferrer"
               className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-semibold hover:brightness-110 transition-all active:scale-[0.98] glow-cyan flex items-center justify-center gap-2">
               <MessageCircle className="w-4 h-4" /> Falar com Suporte
             </a>
