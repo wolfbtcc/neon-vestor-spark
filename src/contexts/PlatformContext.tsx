@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import type { User as AuthUser } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import Decimal from 'decimal.js';
 import {
@@ -37,6 +38,41 @@ const PlatformContext = createContext<PlatformContextType | null>(null);
 
 Decimal.set({ precision: 20, rounding: Decimal.ROUND_DOWN });
 const POOL_FEE = new Decimal('0.15');
+
+function clearStaleAuthStorage() {
+  if (typeof window === 'undefined') return;
+
+  const authKeys = Object.keys(window.localStorage).filter(
+    (key) => key.includes('supabase.auth.token') || key.includes('-auth-token')
+  );
+
+  authKeys.forEach((key) => window.localStorage.removeItem(key));
+}
+
+function isRecoverableAuthError(error: unknown) {
+  if (!(error instanceof Error)) return false;
+  return error.message.includes('Failed to fetch') || error.name.includes('AuthRetryableFetchError');
+}
+
+function authUserToFallbackUser(authUser: AuthUser): User {
+  const metadata = authUser.user_metadata ?? {};
+
+  return {
+    id: authUser.id,
+    name: metadata.name || authUser.email?.split('@')[0] || 'Usuário',
+    email: authUser.email || '',
+    phone: metadata.phone || '',
+    phoneCountry: metadata.phone_country || 'BR',
+    password: '',
+    balance: 0,
+    invested: 0,
+    profits: 0,
+    referralCode: metadata.referral_code || '',
+    referredBy: metadata.referred_by_code || '',
+    createdAt: authUser.created_at ? new Date(authUser.created_at).getTime() : Date.now(),
+    isAdmin: false,
+  };
+}
 
 function profileToUser(p: any): User {
   return {
@@ -85,86 +121,142 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
 
 
 
-  const loadUserData = useCallback(async (userId: string) => {
-    const [profileRes, investRes, depositRes, withdrawRes, commRes, profitRes, allProfilesRes] = await Promise.all([
-      supabase.from('profiles').select('*').eq('user_id', userId).single(),
-      supabase.from('investments').select('*').eq('user_id', userId),
-      supabase.from('deposits').select('*').eq('user_id', userId),
-      supabase.from('withdrawals').select('*').eq('user_id', userId),
-      supabase.from('commissions').select('*').eq('user_id', userId),
-      supabase.from('profit_history').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
-      supabase.from('profiles').select('*'),
-    ]);
+  const loadUserData = useCallback(async (userId: string, authUser?: AuthUser) => {
+    setState(prev => ({ ...prev, loading: true }));
 
-    if (!profileRes.data) return;
+    try {
+      let profileRes = await supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle();
 
-    const investments = (investRes.data || []).map(dbInvestmentToInvestment);
+      if (!profileRes.data && authUser) {
+        const fallbackUser = authUserToFallbackUser(authUser);
 
-    const user = profileToUser(profileRes.data);
-    const allUsers = (allProfilesRes.data || []).map(profileToUser);
+        await supabase.from('profiles').upsert({
+          user_id: fallbackUser.id,
+          name: fallbackUser.name,
+          email: fallbackUser.email,
+          phone: fallbackUser.phone,
+          phone_country: fallbackUser.phoneCountry,
+          referred_by: fallbackUser.referredBy || null,
+          balance: 0,
+          invested: 0,
+          profits: 0,
+        }, { onConflict: 'user_id' });
 
-    setState({
-      user,
-      investments,
-      deposits: (depositRes.data || []).map((d: any) => ({
-        id: d.id,
-        userId: d.user_id,
-        amount: Number(d.amount),
-        method: d.method as 'pix' | 'usdt',
-        status: d.status as 'pending' | 'confirmed',
-        pixCode: d.pix_code || undefined,
-        walletAddress: d.wallet_address || undefined,
-        createdAt: new Date(d.created_at).getTime(),
-      })),
-      withdrawals: (withdrawRes.data || []).map((w: any) => ({
-        id: w.id,
-        userId: w.user_id,
-        amount: Number(w.amount),
-        pixName: w.pix_name,
-        pixKey: w.pix_key,
-        type: w.type as 'profits' | 'commission' | 'pool',
-        status: w.status as 'pending' | 'completed',
-        createdAt: new Date(w.created_at).getTime(),
-      })),
-      commissions: (commRes.data || []).map((c: any) => ({
-        id: c.id,
-        userId: c.user_id,
-        fromUserId: c.from_user_id,
-        fromUserName: c.from_user_name,
-        level: c.level,
-        amount: Number(c.amount),
-        createdAt: new Date(c.created_at).getTime(),
-      })),
-      profitHistory: (profitRes.data || []).map((p: any) => ({
-        id: p.id,
-        userId: p.user_id,
-        amount: Number(p.amount),
-        fee: Number(p.fee),
-        net: Number(p.net),
-        investmentId: p.investment_id,
-        createdAt: new Date(p.created_at).getTime(),
-      })),
-      allUsers,
-      loading: false,
-    });
+        profileRes = await supabase.from('profiles').select('*').eq('user_id', userId).maybeSingle();
+      }
+
+      if (!profileRes.data) {
+        const fallbackUser = authUser ? authUserToFallbackUser(authUser) : state.user;
+
+        setState({
+          user: fallbackUser,
+          investments: [],
+          deposits: [],
+          withdrawals: [],
+          commissions: [],
+          profitHistory: [],
+          allUsers: fallbackUser ? [fallbackUser] : [],
+          loading: false,
+        });
+        return;
+      }
+
+      const profile = profileRes.data;
+      const [investRes, depositRes, withdrawRes, commRes, profitRes, allProfilesRes] = await Promise.all([
+        supabase.from('investments').select('*').eq('user_id', userId),
+        supabase.from('deposits').select('*').eq('user_id', userId),
+        supabase.from('withdrawals').select('*').eq('user_id', userId),
+        supabase.from('commissions').select('*').eq('user_id', userId),
+        supabase.from('profit_history').select('*').eq('user_id', userId).order('created_at', { ascending: false }).limit(200),
+        profile.is_admin ? supabase.from('profiles').select('*') : Promise.resolve({ data: [profile] }),
+      ]);
+
+      const investments = (investRes.data || []).map(dbInvestmentToInvestment);
+      const user = profileToUser(profile);
+      const allUsers = (allProfilesRes.data || [profile]).map(profileToUser);
+
+      setState({
+        user,
+        investments,
+        deposits: (depositRes.data || []).map((d: any) => ({
+          id: d.id,
+          userId: d.user_id,
+          amount: Number(d.amount),
+          method: d.method as 'pix' | 'usdt',
+          status: d.status as 'pending' | 'confirmed',
+          pixCode: d.pix_code || undefined,
+          walletAddress: d.wallet_address || undefined,
+          createdAt: new Date(d.created_at).getTime(),
+        })),
+        withdrawals: (withdrawRes.data || []).map((w: any) => ({
+          id: w.id,
+          userId: w.user_id,
+          amount: Number(w.amount),
+          pixName: w.pix_name,
+          pixKey: w.pix_key,
+          type: w.type as 'profits' | 'commission' | 'pool',
+          status: w.status as 'pending' | 'completed',
+          createdAt: new Date(w.created_at).getTime(),
+        })),
+        commissions: (commRes.data || []).map((c: any) => ({
+          id: c.id,
+          userId: c.user_id,
+          fromUserId: c.from_user_id,
+          fromUserName: c.from_user_name,
+          level: c.level,
+          amount: Number(c.amount),
+          createdAt: new Date(c.created_at).getTime(),
+        })),
+        profitHistory: (profitRes.data || []).map((p: any) => ({
+          id: p.id,
+          userId: p.user_id,
+          amount: Number(p.amount),
+          fee: Number(p.fee),
+          net: Number(p.net),
+          investmentId: p.investment_id,
+          createdAt: new Date(p.created_at).getTime(),
+        })),
+        allUsers,
+        loading: false,
+      });
+    } catch (error) {
+      console.error('Load user data error:', error);
+      setState(prev => ({
+        ...prev,
+        user: prev.user || (authUser ? authUserToFallbackUser(authUser) : null),
+        loading: false,
+      }));
+    }
   }, []);
 
   // Listen for auth state changes
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (session?.user) {
-        setTimeout(() => loadUserData(session.user.id), 0);
+        setTimeout(() => {
+          void loadUserData(session.user.id, session.user);
+        }, 0);
       } else {
         setState(prev => ({ ...prev, user: null, loading: false }));
       }
     });
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        loadUserData(session.user.id);
-      } else {
+    void supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error && isRecoverableAuthError(error)) {
+        clearStaleAuthStorage();
         setState(prev => ({ ...prev, loading: false }));
+        return;
       }
+
+      if (session?.user) {
+        void loadUserData(session.user.id, session.user);
+      } else {
+        clearStaleAuthStorage();
+        setState(prev => ({ ...prev, user: null, loading: false }));
+      }
+    }).catch(() => {
+      clearStaleAuthStorage();
+      setState(prev => ({ ...prev, user: null, loading: false }));
     });
 
     return () => subscription.unsubscribe();
@@ -180,12 +272,18 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
   }, [state.user, loadUserData]);
 
   const login = useCallback(async (email: string, password: string): Promise<boolean> => {
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
+    let { error } = await supabase.auth.signInWithPassword({ email, password });
+
+    if (error && isRecoverableAuthError(error)) {
+      clearStaleAuthStorage();
+      ({ error } = await supabase.auth.signInWithPassword({ email, password }));
+    }
+
     return !error;
   }, []);
 
   const register = useCallback(async (name: string, email: string, password: string, referralCode?: string, phone?: string, phoneCountry?: string): Promise<boolean> => {
-    const { error } = await supabase.auth.signUp({
+    let { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -197,6 +295,23 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
         },
       },
     });
+
+    if (error && isRecoverableAuthError(error)) {
+      clearStaleAuthStorage();
+      ({ error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            name,
+            phone: phone || '',
+            phone_country: phoneCountry || 'BR',
+            referred_by_code: referralCode || '',
+          },
+        },
+      }));
+    }
+
     return !error;
   }, []);
 
