@@ -269,6 +269,19 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     setState(prev => ({ ...prev, user: null }));
   }, []);
 
+  const refreshData = useCallback(async () => {
+    if (!state.user) return;
+
+    const [profile] = await Promise.all([
+      loadProfile(state.user.id),
+      loadCollections(state.user.id, state.user.isAdmin),
+    ]);
+
+    if (profile && currentSessionUserIdRef.current === state.user.id) {
+      setState(prev => ({ ...prev, user: profileToUser(profile) }));
+    }
+  }, [loadCollections, loadProfile, state.user]);
+
   const depositFn = useCallback(async (amount: number, method: 'pix' | 'usdt'): Promise<Deposit | null> => {
     if (!state.user) return null;
     const pixCode = method === 'pix' ? generatePixCode() : undefined;
@@ -383,19 +396,6 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     await supabase.from('profiles').update({ name: newName }).eq('user_id', state.user.id);
     await refreshData();
   }, [refreshData, state.user]);
-
-  const refreshData = useCallback(async () => {
-    if (!state.user) return;
-
-    const [profile] = await Promise.all([
-      loadProfile(state.user.id),
-      loadCollections(state.user.id, state.user.isAdmin),
-    ]);
-
-    if (profile && currentSessionUserIdRef.current === state.user.id) {
-      setState(prev => ({ ...prev, user: profileToUser(profile) }));
-    }
-  }, [loadCollections, loadProfile, state.user]);
 
   const loyaltyDays = state.user
     ? Math.min(7, Math.floor((Date.now() - state.user.createdAt) / 86400000))
