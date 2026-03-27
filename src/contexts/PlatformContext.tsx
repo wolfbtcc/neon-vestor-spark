@@ -63,23 +63,22 @@ function saveJSON(key: string, value: unknown) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
-// ── Daily yield generation at 12:00 ──────────────────────────────
+// ── Hourly yield generation ──────────────────────────────────────
 
-function generateDailyYields() {
-  const now = new Date();
-  const todayKey = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}`;
-  const lastRun = localStorage.getItem(STORAGE_KEYS.lastYieldRun);
+function generateHourlyYields() {
+  const nowMs = Date.now();
+  const lastRunMs = Number(localStorage.getItem(STORAGE_KEYS.lastYieldRun) || '0');
 
-  // Only run if it's 12:00+ and hasn't run today
-  if (now.getHours() < 12) return;
-  if (lastRun === todayKey) return;
+  // Need at least 1 hour (3600000ms) since last run
+  if (lastRunMs > 0 && (nowMs - lastRunMs) < 3600000) return;
 
   const investments: Investment[] = loadJSON(STORAGE_KEYS.investments, []);
   const users: User[] = loadJSON(STORAGE_KEYS.users, []);
   let profitHistory: ProfitEntry[] = loadJSON(STORAGE_KEYS.profitHistory, []);
 
-  const nowMs = Date.now();
+  // Calculate how many hours elapsed since last run (or since investment start)
   const userUpdates: Record<string, { profits: number; balance: number }> = {};
+  let anyChange = false;
 
   for (const inv of investments) {
     if (inv.status !== 'active') continue;
@@ -87,28 +86,46 @@ function generateDailyYields() {
     // Check if investment has ended
     if (nowMs >= inv.endDate) {
       inv.status = 'completed';
+      anyChange = true;
       continue;
     }
 
+    // Determine the reference point for this investment
+    const effectiveLastRun = lastRunMs > 0 ? Math.max(lastRunMs, inv.startDate) : inv.startDate;
+    const effectiveNow = Math.min(nowMs, inv.endDate);
+    const elapsedMs = effectiveNow - effectiveLastRun;
+
+    // How many full hours elapsed
+    const hoursElapsed = Math.floor(elapsedMs / 3600000);
+    if (hoursElapsed <= 0) continue;
+
+    // Calculate profit per hour
     const amount = new Decimal(inv.amount);
     const returnPct = new Decimal(inv.returnPercent);
     const totalProfit = amount.mul(returnPct).div(100);
-    const dailyProfit = totalProfit.div(inv.durationDays);
-    const poolFee = dailyProfit.mul(POOL_FEE);
-    const netProfit = dailyProfit.minus(poolFee);
+    const totalHours = new Decimal(inv.durationDays).mul(24);
+    const profitPerHour = totalProfit.div(totalHours);
+    const poolFeePerHour = profitPerHour.mul(POOL_FEE);
+    const netPerHour = profitPerHour.minus(poolFeePerHour);
 
-    const entry: ProfitEntry = {
-      id: generateId(),
-      userId: inv.userId,
-      amount: dailyProfit.toNumber(),
-      fee: poolFee.toNumber(),
-      net: netProfit.toNumber(),
-      investmentId: inv.id,
-      createdAt: nowMs,
-    };
+    // Create one entry per hour
+    for (let h = 0; h < hoursElapsed; h++) {
+      const entryTime = effectiveLastRun + (h + 1) * 3600000;
+      const entry: ProfitEntry = {
+        id: generateId(),
+        userId: inv.userId,
+        amount: profitPerHour.toNumber(),
+        fee: poolFeePerHour.toNumber(),
+        net: netPerHour.toNumber(),
+        investmentId: inv.id,
+        createdAt: entryTime,
+      };
+      profitHistory.unshift(entry);
+    }
 
-    profitHistory.unshift(entry);
-    inv.profit += netProfit.toNumber();
+    const totalNet = netPerHour.mul(hoursElapsed).toNumber();
+    inv.profit += totalNet;
+    anyChange = true;
 
     if (!userUpdates[inv.userId]) {
       const user = users.find(u => u.id === inv.userId);
@@ -117,8 +134,14 @@ function generateDailyYields() {
         balance: user?.balance || 0,
       };
     }
-    userUpdates[inv.userId].profits += netProfit.toNumber();
-    userUpdates[inv.userId].balance += netProfit.toNumber();
+    userUpdates[inv.userId].profits += totalNet;
+    userUpdates[inv.userId].balance += totalNet;
+  }
+
+  if (!anyChange && Object.keys(userUpdates).length === 0) {
+    // Still update the timestamp so we don't keep rechecking
+    localStorage.setItem(STORAGE_KEYS.lastYieldRun, String(nowMs));
+    return;
   }
 
   // Apply user updates
@@ -133,7 +156,7 @@ function generateDailyYields() {
   saveJSON(STORAGE_KEYS.investments, investments);
   saveJSON(STORAGE_KEYS.profitHistory, profitHistory);
   saveJSON(STORAGE_KEYS.users, users);
-  localStorage.setItem(STORAGE_KEYS.lastYieldRun, todayKey);
+  localStorage.setItem(STORAGE_KEYS.lastYieldRun, String(nowMs));
 }
 
 // ── Provider ─────────────────────────────────────────────────────
@@ -181,7 +204,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
 
   // On mount: run yield generation, then restore session
   useEffect(() => {
-    generateDailyYields();
+    generateHourlyYields();
     const currentUserId = localStorage.getItem(STORAGE_KEYS.currentUser);
     if (currentUserId) {
       loadUserData(currentUserId);
@@ -190,10 +213,10 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     }
   }, [loadUserData]);
 
-  // Check for yield generation periodically (every 5 min)
+  // Check for yield generation every 5 min
   useEffect(() => {
     const interval = setInterval(() => {
-      generateDailyYields();
+      generateHourlyYields();
       if (state.user) loadUserData(state.user.id);
     }, 300000);
     return () => clearInterval(interval);
@@ -452,7 +475,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
   }, [state.user, loadUserData]);
 
   const refreshData = useCallback(async () => {
-    generateDailyYields();
+    generateHourlyYields();
     if (state.user) loadUserData(state.user.id);
   }, [state.user, loadUserData]);
 
