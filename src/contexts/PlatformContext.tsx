@@ -47,7 +47,6 @@ const STORAGE_KEYS = {
   commissions: 'vortex_commissions',
   profitHistory: 'vortex_profit_history',
   currentUser: 'vortex_current_user',
-  lastYieldRun: 'vortex_last_yield_run',
 };
 
 function loadJSON<T>(key: string, fallback: T): T {
@@ -67,13 +66,8 @@ function saveJSON(key: string, value: unknown) {
 
 function generateHourlyYields() {
   const nowMs = Date.now();
-  const lastRunMs = Number(localStorage.getItem(STORAGE_KEYS.lastYieldRun) || '0');
-
-  // Need at least 1 hour (3600000ms) since last run
-  if (lastRunMs > 0 && (nowMs - lastRunMs) < 3600000) return;
 
   const investments: Investment[] = loadJSON(STORAGE_KEYS.investments, []);
-  const users: User[] = loadJSON(STORAGE_KEYS.users, []);
   let profitHistory: ProfitEntry[] = loadJSON(STORAGE_KEYS.profitHistory, []);
 
   let anyChange = false;
@@ -83,17 +77,46 @@ function generateHourlyYields() {
 
     // Check if investment has ended
     if (nowMs >= inv.endDate) {
+      // Generate any remaining yields before completing
+      const refPoint = inv.lastYieldAt || inv.startDate;
+      const remainingMs = inv.endDate - refPoint;
+      const remainingHours = Math.floor(remainingMs / 3600000);
+
+      if (remainingHours > 0) {
+        const amount = new Decimal(inv.amount);
+        const returnPct = new Decimal(inv.returnPercent);
+        const totalProfit = amount.mul(returnPct).div(100);
+        const totalHours = new Decimal(inv.durationDays).mul(24);
+        const profitPerHour = totalProfit.div(totalHours);
+        const poolFeePerHour = profitPerHour.mul(POOL_FEE);
+        const netPerHour = profitPerHour.minus(poolFeePerHour);
+
+        for (let h = 0; h < remainingHours; h++) {
+          const entryTime = refPoint + (h + 1) * 3600000;
+          profitHistory.unshift({
+            id: generateId(),
+            userId: inv.userId,
+            amount: profitPerHour.toNumber(),
+            fee: poolFeePerHour.toNumber(),
+            net: netPerHour.toNumber(),
+            investmentId: inv.id,
+            createdAt: entryTime,
+          });
+        }
+        inv.profit += netPerHour.mul(remainingHours).toNumber();
+      }
+
       inv.status = 'completed';
+      inv.lastYieldAt = inv.endDate;
       anyChange = true;
       continue;
     }
 
-    // Determine the reference point for this investment
-    const effectiveLastRun = lastRunMs > 0 ? Math.max(lastRunMs, inv.startDate) : inv.startDate;
-    const effectiveNow = Math.min(nowMs, inv.endDate);
-    const elapsedMs = effectiveNow - effectiveLastRun;
+    // Per-investment tracking: use lastYieldAt or startDate as reference
+    const refPoint = inv.lastYieldAt || inv.startDate;
+    const elapsedMs = nowMs - refPoint;
 
-    // How many full hours elapsed
+    // How many full hours elapsed since last yield for THIS investment
     const hoursElapsed = Math.floor(elapsedMs / 3600000);
     if (hoursElapsed <= 0) continue;
 
@@ -108,8 +131,8 @@ function generateHourlyYields() {
 
     // Create one entry per hour
     for (let h = 0; h < hoursElapsed; h++) {
-      const entryTime = effectiveLastRun + (h + 1) * 3600000;
-      const entry: ProfitEntry = {
+      const entryTime = refPoint + (h + 1) * 3600000;
+      profitHistory.unshift({
         id: generateId(),
         userId: inv.userId,
         amount: profitPerHour.toNumber(),
@@ -117,23 +140,20 @@ function generateHourlyYields() {
         net: netPerHour.toNumber(),
         investmentId: inv.id,
         createdAt: entryTime,
-      };
-      profitHistory.unshift(entry);
+      });
     }
 
     const totalNet = netPerHour.mul(hoursElapsed).toNumber();
     inv.profit += totalNet;
+    // Update per-investment reference point
+    inv.lastYieldAt = refPoint + hoursElapsed * 3600000;
     anyChange = true;
   }
 
-  if (!anyChange) {
-    localStorage.setItem(STORAGE_KEYS.lastYieldRun, String(nowMs));
-    return;
-  }
+  if (!anyChange) return;
 
   saveJSON(STORAGE_KEYS.investments, investments);
   saveJSON(STORAGE_KEYS.profitHistory, profitHistory);
-  localStorage.setItem(STORAGE_KEYS.lastYieldRun, String(nowMs));
 }
 
 // ── Provider ─────────────────────────────────────────────────────
@@ -190,12 +210,12 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     }
   }, [loadUserData]);
 
-  // Check for yield generation every 5 min
+  // Check for yield generation every 1 min
   useEffect(() => {
     const interval = setInterval(() => {
       generateHourlyYields();
       if (state.user) loadUserData(state.user.id);
-    }, 300000);
+    }, 60000);
     return () => clearInterval(interval);
   }, [state.user, loadUserData]);
 

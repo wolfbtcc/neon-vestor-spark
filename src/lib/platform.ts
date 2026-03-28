@@ -48,6 +48,7 @@ export interface Investment {
   endDate: number;
   status: 'active' | 'completed' | 'withdrawn';
   profit: number;
+  lastYieldAt?: number;
 }
 
 export interface Deposit {
