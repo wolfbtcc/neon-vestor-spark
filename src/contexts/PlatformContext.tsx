@@ -405,16 +405,15 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     const inv = investments.find(i => i.id === investmentId);
     if (!inv || !state.user || inv.status !== 'completed') return false;
 
-    const total = inv.amount + inv.profit;
+    // Profits already credited in real-time, only return the invested capital
     inv.status = 'withdrawn';
     saveJSON(STORAGE_KEYS.investments, investments);
 
     const users: User[] = loadJSON(STORAGE_KEYS.users, []);
     const user = users.find(u => u.id === state.user!.id);
     if (user) {
-      user.balance += total;
+      user.balance += inv.amount;
       user.invested = Math.max(0, user.invested - inv.amount);
-      user.profits += inv.profit;
       saveJSON(STORAGE_KEYS.users, users);
     }
 
