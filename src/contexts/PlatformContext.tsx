@@ -133,7 +133,6 @@ function generateHourlyYields() {
 
   saveJSON(STORAGE_KEYS.investments, investments);
   saveJSON(STORAGE_KEYS.profitHistory, profitHistory);
-  saveJSON(STORAGE_KEYS.users, users);
   localStorage.setItem(STORAGE_KEYS.lastYieldRun, String(nowMs));
 }
 
