@@ -62,6 +62,46 @@ function saveJSON(key: string, value: unknown) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 
+// ── One-time reconciliation for past yields not credited ─────────
+
+function reconcileMissingProfits() {
+  const RECONCILED_KEY = 'vortex_profits_reconciled_v2';
+  if (localStorage.getItem(RECONCILED_KEY)) return;
+
+  const users: User[] = loadJSON(STORAGE_KEYS.users, []);
+  const investments: Investment[] = loadJSON(STORAGE_KEYS.investments, []);
+  const profitHistory: ProfitEntry[] = loadJSON(STORAGE_KEYS.profitHistory, []);
+
+  // For non-withdrawn investments, sum all profitHistory net entries per user
+  // These are yields that were generated but never credited to user.profits/balance
+  const nonWithdrawnInvIds = new Set(
+    investments.filter(i => i.status === 'active' || i.status === 'completed').map(i => i.id)
+  );
+
+  const missingPerUser: Record<string, number> = {};
+  for (const entry of profitHistory) {
+    if (nonWithdrawnInvIds.has(entry.investmentId)) {
+      missingPerUser[entry.userId] = (missingPerUser[entry.userId] || 0) + entry.net;
+    }
+  }
+
+  let changed = false;
+  for (const [userId, totalNet] of Object.entries(missingPerUser)) {
+    if (totalNet <= 0) continue;
+    const user = users.find(u => u.id === userId);
+    if (user) {
+      user.profits += totalNet;
+      user.balance += totalNet;
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    saveJSON(STORAGE_KEYS.users, users);
+  }
+  localStorage.setItem(RECONCILED_KEY, Date.now().toString());
+}
+
 // ── Hourly yield generation ──────────────────────────────────────
 
 function generateHourlyYields() {
@@ -212,6 +252,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
 
   // On mount: run yield generation, then restore session
   useEffect(() => {
+    reconcileMissingProfits();
     generateHourlyYields();
     const currentUserId = localStorage.getItem(STORAGE_KEYS.currentUser);
     if (currentUserId) {
