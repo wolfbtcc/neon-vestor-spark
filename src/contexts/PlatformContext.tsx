@@ -76,8 +76,6 @@ function generateHourlyYields() {
   const users: User[] = loadJSON(STORAGE_KEYS.users, []);
   let profitHistory: ProfitEntry[] = loadJSON(STORAGE_KEYS.profitHistory, []);
 
-  // Calculate how many hours elapsed since last run (or since investment start)
-  const userUpdates: Record<string, { profits: number; balance: number }> = {};
   let anyChange = false;
 
   for (const inv of investments) {
@@ -126,31 +124,11 @@ function generateHourlyYields() {
     const totalNet = netPerHour.mul(hoursElapsed).toNumber();
     inv.profit += totalNet;
     anyChange = true;
-
-    if (!userUpdates[inv.userId]) {
-      const user = users.find(u => u.id === inv.userId);
-      userUpdates[inv.userId] = {
-        profits: user?.profits || 0,
-        balance: user?.balance || 0,
-      };
-    }
-    userUpdates[inv.userId].profits += totalNet;
-    userUpdates[inv.userId].balance += totalNet;
   }
 
-  if (!anyChange && Object.keys(userUpdates).length === 0) {
-    // Still update the timestamp so we don't keep rechecking
+  if (!anyChange) {
     localStorage.setItem(STORAGE_KEYS.lastYieldRun, String(nowMs));
     return;
-  }
-
-  // Apply user updates
-  for (const [userId, upd] of Object.entries(userUpdates)) {
-    const user = users.find(u => u.id === userId);
-    if (user) {
-      user.profits = upd.profits;
-      user.balance = upd.balance;
-    }
   }
 
   saveJSON(STORAGE_KEYS.investments, investments);
