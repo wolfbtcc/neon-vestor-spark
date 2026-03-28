@@ -252,6 +252,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
 
   // On mount: run yield generation, then restore session
   useEffect(() => {
+    reconcileMissingProfits();
     generateHourlyYields();
     const currentUserId = localStorage.getItem(STORAGE_KEYS.currentUser);
     if (currentUserId) {
