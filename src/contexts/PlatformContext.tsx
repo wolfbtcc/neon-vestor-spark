@@ -69,6 +69,10 @@ function generateHourlyYields() {
 
   const investments: Investment[] = loadJSON(STORAGE_KEYS.investments, []);
   let profitHistory: ProfitEntry[] = loadJSON(STORAGE_KEYS.profitHistory, []);
+  const users: User[] = loadJSON(STORAGE_KEYS.users, []);
+
+  // Track net profit added per user to update balance/profits
+  const userProfitMap: Record<string, number> = {};
 
   let anyChange = false;
 
@@ -77,7 +81,6 @@ function generateHourlyYields() {
 
     // Check if investment has ended
     if (nowMs >= inv.endDate) {
-      // Generate any remaining yields before completing
       const refPoint = inv.lastYieldAt || inv.startDate;
       const remainingMs = inv.endDate - refPoint;
       const remainingHours = Math.floor(remainingMs / 3600000);
@@ -103,7 +106,9 @@ function generateHourlyYields() {
             createdAt: entryTime,
           });
         }
-        inv.profit += netPerHour.mul(remainingHours).toNumber();
+        const netTotal = netPerHour.mul(remainingHours).toNumber();
+        inv.profit += netTotal;
+        userProfitMap[inv.userId] = (userProfitMap[inv.userId] || 0) + netTotal;
       }
 
       inv.status = 'completed';
@@ -112,15 +117,12 @@ function generateHourlyYields() {
       continue;
     }
 
-    // Per-investment tracking: use lastYieldAt or startDate as reference
+    // Per-investment tracking
     const refPoint = inv.lastYieldAt || inv.startDate;
     const elapsedMs = nowMs - refPoint;
-
-    // How many full hours elapsed since last yield for THIS investment
     const hoursElapsed = Math.floor(elapsedMs / 3600000);
     if (hoursElapsed <= 0) continue;
 
-    // Calculate profit per hour
     const amount = new Decimal(inv.amount);
     const returnPct = new Decimal(inv.returnPercent);
     const totalProfit = amount.mul(returnPct).div(100);
@@ -129,7 +131,6 @@ function generateHourlyYields() {
     const poolFeePerHour = profitPerHour.mul(POOL_FEE);
     const netPerHour = profitPerHour.minus(poolFeePerHour);
 
-    // Create one entry per hour
     for (let h = 0; h < hoursElapsed; h++) {
       const entryTime = refPoint + (h + 1) * 3600000;
       profitHistory.unshift({
@@ -145,15 +146,25 @@ function generateHourlyYields() {
 
     const totalNet = netPerHour.mul(hoursElapsed).toNumber();
     inv.profit += totalNet;
-    // Update per-investment reference point
+    userProfitMap[inv.userId] = (userProfitMap[inv.userId] || 0) + totalNet;
     inv.lastYieldAt = refPoint + hoursElapsed * 3600000;
     anyChange = true;
   }
 
   if (!anyChange) return;
 
+  // Update each user's profits and balance with newly generated yields
+  for (const [userId, netProfit] of Object.entries(userProfitMap)) {
+    const user = users.find(u => u.id === userId);
+    if (user) {
+      user.profits += netProfit;
+      user.balance += netProfit;
+    }
+  }
+
   saveJSON(STORAGE_KEYS.investments, investments);
   saveJSON(STORAGE_KEYS.profitHistory, profitHistory);
+  saveJSON(STORAGE_KEYS.users, users);
 }
 
 // ── Provider ─────────────────────────────────────────────────────
@@ -394,16 +405,15 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     const inv = investments.find(i => i.id === investmentId);
     if (!inv || !state.user || inv.status !== 'completed') return false;
 
-    const total = inv.amount + inv.profit;
+    // Profits already credited in real-time, only return the invested capital
     inv.status = 'withdrawn';
     saveJSON(STORAGE_KEYS.investments, investments);
 
     const users: User[] = loadJSON(STORAGE_KEYS.users, []);
     const user = users.find(u => u.id === state.user!.id);
     if (user) {
-      user.balance += total;
+      user.balance += inv.amount;
       user.invested = Math.max(0, user.invested - inv.amount);
-      user.profits += inv.profit;
       saveJSON(STORAGE_KEYS.users, users);
     }
 
