@@ -47,7 +47,6 @@ const STORAGE_KEYS = {
   commissions: 'vortex_commissions',
   profitHistory: 'vortex_profit_history',
   currentUser: 'vortex_current_user',
-  lastYieldRun: 'vortex_last_yield_run',
 };
 
 function loadJSON<T>(key: string, fallback: T): T {
@@ -211,12 +210,12 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     }
   }, [loadUserData]);
 
-  // Check for yield generation every 5 min
+  // Check for yield generation every 1 min
   useEffect(() => {
     const interval = setInterval(() => {
       generateHourlyYields();
       if (state.user) loadUserData(state.user.id);
-    }, 300000);
+    }, 60000);
     return () => clearInterval(interval);
   }, [state.user, loadUserData]);
 
