@@ -53,7 +53,7 @@ export default function ProfitHistory() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <span className="font-mono-data text-neon-green font-bold text-sm">
-                      +{formatBRL(entry.amount)}
+                      +{formatBRL(entry.net)}
                     </span>
                     <div className="flex items-center gap-1.5 mt-0.5">
                       <span className="text-[11px] text-muted-foreground">{dateStr}</span>
