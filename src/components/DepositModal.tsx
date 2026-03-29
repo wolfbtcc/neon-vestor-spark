@@ -163,7 +163,7 @@ export default function DepositModal({ open, onClose }: DepositModalProps) {
               </p>
             </div>
             <p className="text-xs text-muted-foreground">Valor: <span className="font-mono-data text-neon-cyan font-bold">{formatBRL(selectedAmount!)}</span></p>
-            <a href="https://wa.link/qcfcr0" target="_blank" rel="noopener noreferrer"
+            <a <a href="https://wa.link/slgoa3" target="_blank" rel="noopener noreferrer" target="_blank" rel="noopener noreferrer"
               className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-semibold hover:brightness-110 transition-all active:scale-[0.98] glow-cyan flex items-center justify-center gap-2">
               <MessageCircle className="w-4 h-4" /> Falar com Suporte
             </a>
