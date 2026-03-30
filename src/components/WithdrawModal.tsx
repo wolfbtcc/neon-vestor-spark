@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { usePlatform } from '@/contexts/PlatformContext';
 import { formatBRL } from '@/lib/platform';
-import { X, DollarSign, Wallet, Lock, CalendarCheck, Clock } from 'lucide-react';
+import { getRetentionBonusMultiplier } from '@/contexts/PlatformContext';
+import { X, DollarSign, Wallet, Lock, CalendarCheck, Clock, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
+import WithdrawConfirmAlert from './WithdrawConfirmAlert';
 
 interface WithdrawModalProps {
   open: boolean;
@@ -48,14 +50,34 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
   const [pixName, setPixName] = useState('');
   const [pixKey, setPixKey] = useState('');
   const [amount, setAmount] = useState('');
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
   if (!open || !user) return null;
+
+  // Calculate retention bonus info
+  const bonusMultiplier = getRetentionBonusMultiplier(user.id);
+  const bonusPercent = Math.round(bonusMultiplier * 100);
+  const userWithdrawalsSorted = withdrawals.filter(w => w.userId === user.id && (w.type === 'profits' || w.type === 'pool')).sort((a, b) => b.createdAt - a.createdAt);
+  const lastWithdrawDate = userWithdrawalsSorted.length > 0 ? userWithdrawalsSorted[0].createdAt : user.createdAt;
+  const bonusDays = Math.floor((Date.now() - lastWithdrawDate) / 86400000);
 
   const userWithdrawals = withdrawals.filter(w => w.userId === user.id).sort((a, b) => b.createdAt - a.createdAt);
   const poolStatus = isPoolWithdrawAvailable();
   const poolEarnings = user.profits;
   const poolFee = poolEarnings * POOL_FEE;
   const poolNet = poolEarnings - poolFee;
+
+  const triggerWithConfirm = (action: () => void) => {
+    setPendingAction(() => action);
+    setShowConfirm(true);
+  };
+
+  const handleConfirmProceed = () => {
+    setShowConfirm(false);
+    pendingAction?.();
+    setPendingAction(null);
+  };
 
   const handleWithdrawProfits = async () => {
     if (!pixName.trim()) { toast.error('Informe o nome'); return; }
@@ -64,23 +86,27 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
     if (isNaN(val) || val <= 0) { toast.error('Valor inválido'); return; }
     if (val < 20) { toast.error('Valor mínimo para saque: $20'); return; }
     if (val > user.profits) { toast.error('Saldo de lucros insuficiente'); return; }
-    const success = await withdraw(val, pixName, pixKey, 'profits');
-    if (success) {
-      toast.success('Saque solicitado com sucesso!');
-      setAmount(''); setPixName(''); setPixKey('');
-      setMode('choose');
-    }
+    triggerWithConfirm(async () => {
+      const success = await withdraw(val, pixName, pixKey, 'profits');
+      if (success) {
+        toast.success('Saque solicitado com sucesso!');
+        setAmount(''); setPixName(''); setPixKey('');
+        setMode('choose');
+      }
+    });
   };
 
   const handlePoolWithdraw = async () => {
     if (!poolStatus.available) return;
     if (poolNet <= 0) { toast.error('Sem rendimentos disponíveis no Pool.'); return; }
-    const success = await withdraw(poolEarnings, '', '', 'pool');
-    if (success) {
-      toast.success('Saque Pool VX1 solicitado!');
-      setMode('choose');
-      onClose();
-    }
+    triggerWithConfirm(async () => {
+      const success = await withdraw(poolEarnings, '', '', 'pool');
+      if (success) {
+        toast.success('Saque Pool VX1 solicitado!');
+        setMode('choose');
+        onClose();
+      }
+    });
   };
 
   const handlePoolReinvest = async () => {
@@ -113,6 +139,25 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
 
         {mode === 'choose' && (
           <div className="space-y-3">
+            {/* Retention bonus badge */}
+            {bonusPercent > 0 && (
+              <div className="p-3 rounded-xl bg-primary/5 border border-primary/20 flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-primary flex-shrink-0" />
+                <div>
+                  <p className="text-xs font-semibold text-primary">Bônus de Retenção Ativo: +{bonusPercent}%</p>
+                  <p className="text-[10px] text-muted-foreground">{bonusDays} dias sem saque • A cada 15 dias ganha +10%</p>
+                </div>
+              </div>
+            )}
+            {bonusPercent === 0 && (
+              <div className="p-3 rounded-xl bg-muted/50 border border-border flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground">Bônus de Retenção: +0%</p>
+                  <p className="text-[10px] text-muted-foreground">A cada 15 dias sem saque você ganha +10% de rendimento</p>
+                </div>
+              </div>
+            )}
             <p className="text-xs text-muted-foreground mb-1">Escolha o tipo de saque:</p>
 
             <button onClick={() => setMode('profits')}
@@ -249,6 +294,13 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
           </div>
         )}
       </div>
+      <WithdrawConfirmAlert
+        open={showConfirm}
+        onConfirm={handleConfirmProceed}
+        onCancel={() => { setShowConfirm(false); setPendingAction(null); }}
+        bonusDays={bonusDays}
+        bonusPercent={bonusPercent}
+      />
     </div>
   );
 }
