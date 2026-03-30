@@ -102,6 +102,31 @@ function reconcileMissingProfits() {
   localStorage.setItem(RECONCILED_KEY, Date.now().toString());
 }
 
+// ── Retention bonus calculation ──────────────────────────────────
+
+function getRetentionBonusMultiplier(userId: string): number {
+  const withdrawals: Withdrawal[] = loadJSON(STORAGE_KEYS.withdrawals, []);
+  const userWithdrawals = withdrawals
+    .filter(w => w.userId === userId && (w.type === 'profits' || w.type === 'pool'))
+    .sort((a, b) => b.createdAt - a.createdAt);
+
+  let lastWithdrawDate: number;
+  if (userWithdrawals.length > 0) {
+    lastWithdrawDate = userWithdrawals[0].createdAt;
+  } else {
+    // Use earliest investment start date
+    const investments: Investment[] = loadJSON(STORAGE_KEYS.investments, []);
+    const userInvs = investments.filter(i => i.userId === userId).sort((a, b) => a.startDate - b.startDate);
+    if (userInvs.length === 0) return 0;
+    lastWithdrawDate = userInvs[0].startDate;
+  }
+
+  const daysSinceLastWithdraw = Math.floor((Date.now() - lastWithdrawDate) / 86400000);
+  const bonusBlocks = Math.floor(daysSinceLastWithdraw / 15);
+  const bonusPercent = bonusBlocks * 10; // +10% per 15 days, uncapped
+  return bonusPercent / 100; // return as decimal multiplier (0.1, 0.2, 0.3...)
+}
+
 // ── Hourly yield generation ──────────────────────────────────────
 
 function generateHourlyYields() {
@@ -114,10 +139,22 @@ function generateHourlyYields() {
   // Track net profit added per user to update balance/profits
   const userProfitMap: Record<string, number> = {};
 
+  // Cache retention bonus per user
+  const bonusCache: Record<string, number> = {};
+  function getUserBonus(userId: string): number {
+    if (!(userId in bonusCache)) {
+      bonusCache[userId] = getRetentionBonusMultiplier(userId);
+    }
+    return bonusCache[userId];
+  }
+
   let anyChange = false;
 
   for (const inv of investments) {
     if (inv.status !== 'active') continue;
+
+    const retentionBonus = getUserBonus(inv.userId);
+    const bonusMultiplier = new Decimal(1).plus(retentionBonus);
 
     // Check if investment has ended
     if (nowMs >= inv.endDate) {
@@ -130,7 +167,8 @@ function generateHourlyYields() {
         const returnPct = new Decimal(inv.returnPercent);
         const totalProfit = amount.mul(returnPct).div(100);
         const totalHours = new Decimal(inv.durationDays).mul(24);
-        const profitPerHour = totalProfit.div(totalHours);
+        const baseProfitPerHour = totalProfit.div(totalHours);
+        const profitPerHour = baseProfitPerHour.mul(bonusMultiplier);
         const poolFeePerHour = profitPerHour.mul(POOL_FEE);
         const netPerHour = profitPerHour.minus(poolFeePerHour);
 
@@ -167,7 +205,8 @@ function generateHourlyYields() {
     const returnPct = new Decimal(inv.returnPercent);
     const totalProfit = amount.mul(returnPct).div(100);
     const totalHours = new Decimal(inv.durationDays).mul(24);
-    const profitPerHour = totalProfit.div(totalHours);
+    const baseProfitPerHour = totalProfit.div(totalHours);
+    const profitPerHour = baseProfitPerHour.mul(bonusMultiplier);
     const poolFeePerHour = profitPerHour.mul(POOL_FEE);
     const netPerHour = profitPerHour.minus(poolFeePerHour);
 
@@ -206,6 +245,9 @@ function generateHourlyYields() {
   saveJSON(STORAGE_KEYS.profitHistory, profitHistory);
   saveJSON(STORAGE_KEYS.users, users);
 }
+
+// Export retention bonus for UI usage
+export { getRetentionBonusMultiplier };
 
 // ── Provider ─────────────────────────────────────────────────────
 
