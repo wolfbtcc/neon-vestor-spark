@@ -294,6 +294,13 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
           </div>
         )}
       </div>
+      <WithdrawConfirmAlert
+        open={showConfirm}
+        onConfirm={handleConfirmProceed}
+        onCancel={() => { setShowConfirm(false); setPendingAction(null); }}
+        bonusDays={bonusDays}
+        bonusPercent={bonusPercent}
+      />
     </div>
   );
 }
