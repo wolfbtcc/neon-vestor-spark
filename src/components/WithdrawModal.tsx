@@ -50,8 +50,17 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
   const [pixName, setPixName] = useState('');
   const [pixKey, setPixKey] = useState('');
   const [amount, setAmount] = useState('');
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
 
   if (!open || !user) return null;
+
+  // Calculate retention bonus info
+  const bonusMultiplier = getRetentionBonusMultiplier(user.id);
+  const bonusPercent = Math.round(bonusMultiplier * 100);
+  const userWithdrawalsSorted = withdrawals.filter(w => w.userId === user.id && (w.type === 'profits' || w.type === 'pool')).sort((a, b) => b.createdAt - a.createdAt);
+  const lastWithdrawDate = userWithdrawalsSorted.length > 0 ? userWithdrawalsSorted[0].createdAt : user.createdAt;
+  const bonusDays = Math.floor((Date.now() - lastWithdrawDate) / 86400000);
 
   const userWithdrawals = withdrawals.filter(w => w.userId === user.id).sort((a, b) => b.createdAt - a.createdAt);
   const poolStatus = isPoolWithdrawAvailable();
