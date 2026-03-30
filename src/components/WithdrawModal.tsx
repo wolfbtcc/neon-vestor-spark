@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { usePlatform } from '@/contexts/PlatformContext';
 import { formatBRL } from '@/lib/platform';
 import { getRetentionBonusMultiplier } from '@/contexts/PlatformContext';
-import { X, DollarSign, Wallet, Lock, CalendarCheck, Clock, TrendingUp } from 'lucide-react';
+import { X, DollarSign, Wallet, Lock, CalendarCheck, Clock, TrendingUp, Shield } from 'lucide-react';
 import { toast } from 'sonner';
 import WithdrawConfirmAlert from './WithdrawConfirmAlert';
 
@@ -44,11 +44,15 @@ function isPoolWithdrawAvailable(): { available: boolean; message: string } {
   return { available: false, message: `Saque/reinvestimento do Pool disponível apenas no dia 5 de cada mês (00:00–22:09 horário de Brasília). Faltam ${daysLeft} dia(s).` };
 }
 
+function isValidBEP20Address(address: string): boolean {
+  return /^0x[a-fA-F0-9]{40}$/.test(address);
+}
+
 export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
   const { user, withdraw, invest, withdrawals } = usePlatform();
   const [mode, setMode] = useState<'choose' | 'profits' | 'pool'>('choose');
-  const [pixName, setPixName] = useState('');
-  const [pixKey, setPixKey] = useState('');
+  const [walletName, setWalletName] = useState('');
+  const [walletAddress, setWalletAddress] = useState('');
   const [amount, setAmount] = useState('');
   const [showConfirm, setShowConfirm] = useState(false);
   const [pendingAction, setPendingAction] = useState<(() => void) | null>(null);
@@ -65,8 +69,9 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
   const userWithdrawals = withdrawals.filter(w => w.userId === user.id).sort((a, b) => b.createdAt - a.createdAt);
   const poolStatus = isPoolWithdrawAvailable();
   const poolEarnings = user.profits;
-  const poolFee = poolEarnings * POOL_FEE;
-  const poolNet = poolEarnings - poolFee;
+  const poolNet = poolEarnings - poolEarnings * POOL_FEE;
+
+  const FORTY_EIGHT_HOURS = 48 * 60 * 60 * 1000;
 
   const triggerWithConfirm = (action: () => void) => {
     setPendingAction(() => action);
@@ -80,17 +85,18 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
   };
 
   const handleWithdrawProfits = async () => {
-    if (!pixName.trim()) { toast.error('Informe o nome'); return; }
-    if (!pixKey.trim()) { toast.error('Informe a chave PIX'); return; }
+    if (!walletName.trim()) { toast.error('Informe o nome completo'); return; }
+    if (!walletAddress.trim()) { toast.error('Informe o endereço da carteira BEP20'); return; }
+    if (!isValidBEP20Address(walletAddress.trim())) { toast.error('Endereço BEP20 inválido. Deve começar com 0x seguido de 40 caracteres hexadecimais.'); return; }
     const val = parseFloat(amount);
     if (isNaN(val) || val <= 0) { toast.error('Valor inválido'); return; }
     if (val < 20) { toast.error('Valor mínimo para saque: $20'); return; }
     if (val > user.profits) { toast.error('Saldo de lucros insuficiente'); return; }
     triggerWithConfirm(async () => {
-      const success = await withdraw(val, pixName, pixKey, 'profits');
+      const success = await withdraw(val, walletName, walletAddress, 'profits');
       if (success) {
-        toast.success('Saque solicitado com sucesso!');
-        setAmount(''); setPixName(''); setPixKey('');
+        toast.success('Seu saque foi solicitado com sucesso. O prazo de processamento é de até 48 horas.');
+        setAmount(''); setWalletName(''); setWalletAddress('');
         setMode('choose');
       }
     });
@@ -102,7 +108,7 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
     triggerWithConfirm(async () => {
       const success = await withdraw(poolEarnings, '', '', 'pool');
       if (success) {
-        toast.success('Saque Pool VX1 solicitado!');
+        toast.success('Saque Pool VX1 solicitado! Processamento em até 48 horas.');
         setMode('choose');
         onClose();
       }
@@ -122,11 +128,9 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
 
   const reset = () => {
     setMode('choose');
-    setPixName(''); setPixKey(''); setAmount('');
+    setWalletName(''); setWalletAddress(''); setAmount('');
     onClose();
   };
-
-  const FORTY_EIGHT_HOURS = 48 * 60 * 60 * 1000;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={reset}>
@@ -167,8 +171,8 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
                   <Wallet className="w-5 h-5 text-neon-cyan" />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-foreground">Sacar Lucros</p>
-                  <p className="text-[10px] text-muted-foreground">Disponível todos os dias • Mín. $20</p>
+                  <p className="text-sm font-semibold text-foreground">Sacar Lucros via USDT</p>
+                  <p className="text-[10px] text-muted-foreground">Rede BEP20 • Mín. $20 • Prazo 48h</p>
                   <p className="text-xs font-mono-data text-neon-cyan mt-0.5">{formatBRL(user.profits)} disponível</p>
                 </div>
               </div>
@@ -199,7 +203,6 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
                   {userWithdrawals.map(w => {
                     const d = new Date(w.createdAt);
                     const isPending = w.status === 'pending';
-                    const willConfirmAt = w.createdAt + FORTY_EIGHT_HOURS;
                     return (
                       <div key={w.id} className="flex items-center gap-3 p-3 rounded-xl bg-muted/50 border border-border">
                         <div className="w-8 h-8 rounded-full bg-neon-cyan/10 flex items-center justify-center flex-shrink-0">
@@ -208,7 +211,7 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
                         <div className="flex-1 min-w-0">
                           <p className="font-mono-data text-sm font-bold text-foreground">{formatBRL(w.amount * 0.9)}</p>
                           <p className="text-[10px] text-muted-foreground">
-                            {d.toLocaleDateString('pt-BR')} às {d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}
+                            {d.toLocaleDateString('pt-BR')} às {d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} • USDT BEP20
                           </p>
                         </div>
                         <span className={`text-[10px] px-2 py-0.5 rounded-full border ${
@@ -216,7 +219,7 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
                             ? 'bg-yellow-400/10 text-yellow-400 border-yellow-400/20'
                             : 'bg-neon-green/10 text-neon-green border-neon-green/20'
                         }`}>
-                          {isPending ? 'Pendente' : 'Concluído'}
+                          {isPending ? 'Pendente' : 'Saque Realizado'}
                         </span>
                       </div>
                     );
@@ -227,19 +230,24 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
           </div>
         )}
 
-        {/* Withdraw profits */}
+        {/* Withdraw profits - USDT BEP20 */}
         {mode === 'profits' && (
           <div className="space-y-3">
+            <div className="p-3 rounded-xl bg-primary/5 border border-primary/20 flex items-center gap-2">
+              <Shield className="w-4 h-4 text-primary flex-shrink-0" />
+              <p className="text-[10px] text-muted-foreground">Saque exclusivo via <span className="text-primary font-semibold">USDT (BEP20)</span> • Processamento em até 48h</p>
+            </div>
             <p className="text-xs text-muted-foreground">Lucros disponíveis: <span className="font-mono-data text-neon-cyan">{formatBRL(user.profits)}</span></p>
             <div>
               <label className="text-[11px] tracking-widest text-muted-foreground mb-1 block uppercase">Nome Completo</label>
-              <input type="text" value={pixName} onChange={e => setPixName(e.target.value)} placeholder="Seu nome completo"
+              <input type="text" value={walletName} onChange={e => setWalletName(e.target.value)} placeholder="Seu nome completo"
                 className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-neon-cyan/50 focus:outline-none focus:ring-1 focus:ring-neon-cyan/30 text-sm transition-all" />
             </div>
             <div>
-              <label className="text-[11px] tracking-widest text-muted-foreground mb-1 block uppercase">Chave PIX</label>
-              <input type="text" value={pixKey} onChange={e => setPixKey(e.target.value)} placeholder="CPF, email, telefone ou chave aleatória"
-                className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-neon-cyan/50 focus:outline-none focus:ring-1 focus:ring-neon-cyan/30 text-sm transition-all" />
+              <label className="text-[11px] tracking-widest text-muted-foreground mb-1 block uppercase">Endereço da Carteira BEP20</label>
+              <input type="text" value={walletAddress} onChange={e => setWalletAddress(e.target.value)} placeholder="0x..."
+                className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-neon-cyan/50 focus:outline-none focus:ring-1 focus:ring-neon-cyan/30 text-sm font-mono transition-all" />
+              <p className="text-[10px] text-muted-foreground mt-1">Rede: <span className="font-semibold text-foreground">BEP20 (Binance Smart Chain)</span></p>
             </div>
             <div>
               <label className="text-[11px] tracking-widest text-muted-foreground mb-1 block uppercase">Valor do Saque</label>
@@ -251,7 +259,7 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
             </div>
             <button onClick={handleWithdrawProfits}
               className="w-full py-3 rounded-xl bg-primary text-primary-foreground font-semibold hover:brightness-110 transition-all active:scale-[0.98] glow-cyan">
-              Sacar
+              Solicitar Saque USDT
             </button>
             <button onClick={() => setMode('choose')} className="text-xs text-muted-foreground hover:text-foreground transition-colors">← Voltar</button>
           </div>
