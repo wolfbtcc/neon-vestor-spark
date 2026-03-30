@@ -106,7 +106,7 @@ export default function RedeemPage() {
             return (
               <div key={inv.id}>
                 <button
-                  onClick={() => { setSelectedId(isSelected ? null : inv.id); setShowForm(false); setMethod(null); }}
+                  onClick={() => { setSelectedId(isSelected ? null : inv.id); setShowForm(false); }}
                   className={`w-full rounded-2xl p-5 border transition-all duration-300 text-left ${
                     isSelected
                       ? 'border-neon-cyan/60 bg-neon-cyan/10 shadow-[0_0_20px_rgba(0,245,255,0.15)]'
