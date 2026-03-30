@@ -11,9 +11,8 @@ export default function RedeemPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [pixName, setPixName] = useState('');
-  const [pixKey, setPixKey] = useState('');
-  const [method, setMethod] = useState<'pix' | 'usdt' | null>(null);
+  const [walletName, setWalletName] = useState('');
+  const [walletAddress, setWalletAddress] = useState('');
 
   if (!user) { navigate('/'); return null; }
 
@@ -40,24 +39,21 @@ export default function RedeemPage() {
   const handleStartRedeem = () => {
     if (!selected) return;
     setShowForm(true);
-    setMethod(null);
-    setPixName('');
-    setPixKey('');
+    setWalletName('');
+    setWalletAddress('');
   };
 
   const handleConfirmRedeem = async () => {
-    if (!selected || !method) return;
-    if (method === 'pix' && (!pixName.trim() || !pixKey.trim())) {
-      toast.error('Preencha Nome e Chave PIX.');
-      return;
-    }
+    if (!selected) return;
+    if (!walletName.trim()) { toast.error('Informe o nome completo.'); return; }
+    if (!walletAddress.trim()) { toast.error('Informe o endereço da carteira BEP20.'); return; }
+    if (!/^0x[a-fA-F0-9]{40}$/.test(walletAddress.trim())) { toast.error('Endereço BEP20 inválido.'); return; }
     setConfirming(true);
-    const success = await earlyRedeem(selected.id, pixName, pixKey);
+    const success = await earlyRedeem(selected.id, walletName, walletAddress);
     if (success) {
-      toast.success('Resgate solicitado! Aguarde 24h para confirmação.');
+      toast.success('Resgate solicitado! Processamento em até 48h.');
       setSelectedId(null);
       setShowForm(false);
-      setMethod(null);
     } else {
       toast.error('Erro ao resgatar.');
     }
