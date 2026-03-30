@@ -1,8 +1,10 @@
 import { useState } from 'react';
 import { usePlatform } from '@/contexts/PlatformContext';
 import { formatBRL } from '@/lib/platform';
-import { X, DollarSign, Wallet, Lock, CalendarCheck, Clock } from 'lucide-react';
+import { getRetentionBonusMultiplier } from '@/contexts/PlatformContext';
+import { X, DollarSign, Wallet, Lock, CalendarCheck, Clock, TrendingUp } from 'lucide-react';
 import { toast } from 'sonner';
+import WithdrawConfirmAlert from './WithdrawConfirmAlert';
 
 interface WithdrawModalProps {
   open: boolean;
