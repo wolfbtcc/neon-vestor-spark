@@ -139,6 +139,25 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
 
         {mode === 'choose' && (
           <div className="space-y-3">
+            {/* Retention bonus badge */}
+            {bonusPercent > 0 && (
+              <div className="p-3 rounded-xl bg-primary/5 border border-primary/20 flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-primary flex-shrink-0" />
+                <div>
+                  <p className="text-xs font-semibold text-primary">Bônus de Retenção Ativo: +{bonusPercent}%</p>
+                  <p className="text-[10px] text-muted-foreground">{bonusDays} dias sem saque • A cada 15 dias ganha +10%</p>
+                </div>
+              </div>
+            )}
+            {bonusPercent === 0 && (
+              <div className="p-3 rounded-xl bg-muted/50 border border-border flex items-center gap-2">
+                <TrendingUp className="w-4 h-4 text-muted-foreground flex-shrink-0" />
+                <div>
+                  <p className="text-xs font-semibold text-muted-foreground">Bônus de Retenção: +0%</p>
+                  <p className="text-[10px] text-muted-foreground">A cada 15 dias sem saque você ganha +10% de rendimento</p>
+                </div>
+              </div>
+            )}
             <p className="text-xs text-muted-foreground mb-1">Escolha o tipo de saque:</p>
 
             <button onClick={() => setMode('profits')}
