@@ -454,15 +454,15 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     return true;
   }, [state.user, loadUserData]);
 
-  const withdraw = useCallback(async (amount: number, pixName?: string, pixKey?: string, type?: 'profits' | 'commission' | 'pool'): Promise<boolean> => {
+  const withdraw = useCallback(async (amount: number, walletName?: string, walletAddress?: string, type?: 'profits' | 'commission' | 'pool'): Promise<boolean> => {
     if (!state.user || state.user.profits < amount || amount <= 0) return false;
 
     const w: Withdrawal = {
       id: generateId(),
       userId: state.user.id,
       amount,
-      pixName: pixName || '',
-      pixKey: pixKey || '',
+      walletName: walletName || '',
+      walletAddress: walletAddress || '',
       type: type || 'profits',
       status: 'pending',
       createdAt: Date.now(),
