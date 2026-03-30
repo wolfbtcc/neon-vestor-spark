@@ -118,16 +118,17 @@ export default function TeamPage() {
         {showWithdraw && (
           <div className="neon-card space-y-3">
             <p className="text-xs text-muted-foreground">Comissão disponível: <span className="font-mono-data text-neon-cyan">{formatBRL(totalEarnings)}</span></p>
-            <p className="text-[10px] text-muted-foreground">Disponível diariamente • Mín. $20</p>
+            <p className="text-[10px] text-muted-foreground">Saque via USDT BEP20 • Mín. $20 • Prazo 48h</p>
             <div>
               <label className="text-[11px] tracking-widest text-muted-foreground mb-1 block uppercase">Nome Completo</label>
-              <input type="text" value={pixName} onChange={e => setPixName(e.target.value)} placeholder="Seu nome completo"
+              <input type="text" value={walletName} onChange={e => setWalletName(e.target.value)} placeholder="Seu nome completo"
                 className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-neon-cyan/50 focus:outline-none focus:ring-1 focus:ring-neon-cyan/30 text-sm transition-all" />
             </div>
             <div>
-              <label className="text-[11px] tracking-widest text-muted-foreground mb-1 block uppercase">Chave PIX</label>
-              <input type="text" value={pixKey} onChange={e => setPixKey(e.target.value)} placeholder="CPF, email, telefone ou chave aleatória"
-                className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-neon-cyan/50 focus:outline-none focus:ring-1 focus:ring-neon-cyan/30 text-sm transition-all" />
+              <label className="text-[11px] tracking-widest text-muted-foreground mb-1 block uppercase">Endereço da Carteira BEP20</label>
+              <input type="text" value={walletAddress} onChange={e => setWalletAddress(e.target.value)} placeholder="0x..."
+                className="w-full px-4 py-3 rounded-xl bg-muted border border-border focus:border-neon-cyan/50 focus:outline-none focus:ring-1 focus:ring-neon-cyan/30 text-sm font-mono transition-all" />
+              <p className="text-[10px] text-muted-foreground mt-1">Rede: <span className="font-semibold text-foreground">BEP20 (Binance Smart Chain)</span></p>
             </div>
             <div>
               <label className="text-[11px] tracking-widest text-muted-foreground mb-1 block uppercase">Valor</label>
