@@ -504,7 +504,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     return true;
   }, [state.user, loadUserData]);
 
-  const earlyRedeem = useCallback(async (investmentId: string, pixName?: string, pixKey?: string): Promise<boolean> => {
+  const earlyRedeem = useCallback(async (investmentId: string, walletName?: string, walletAddress?: string): Promise<boolean> => {
     if (!state.user) return false;
 
     const investments: Investment[] = loadJSON(STORAGE_KEYS.investments, []);
@@ -529,8 +529,8 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       id: generateId(),
       userId: state.user.id,
       amount: returnAmount,
-      pixName: pixName || '',
-      pixKey: pixKey || '',
+      walletName: walletName || '',
+      walletAddress: walletAddress || '',
       type: 'profits',
       status: 'completed',
       createdAt: Date.now(),
