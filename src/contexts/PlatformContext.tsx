@@ -23,9 +23,9 @@ interface PlatformContextType extends PlatformState {
   logout: () => void;
   deposit: (amount: number, method: 'pix' | 'usdt') => Promise<Deposit | null>;
   invest: (amount: number, durationDays: number, returnPercent: number) => Promise<boolean>;
-  withdraw: (amount: number, pixName?: string, pixKey?: string, type?: 'profits' | 'commission' | 'pool') => Promise<boolean>;
+  withdraw: (amount: number, walletName?: string, walletAddress?: string, type?: 'profits' | 'commission' | 'pool') => Promise<boolean>;
   redeemCycle: (investmentId: string) => Promise<boolean>;
-  earlyRedeem: (investmentId: string, pixName?: string, pixKey?: string) => Promise<boolean>;
+  earlyRedeem: (investmentId: string, walletName?: string, walletAddress?: string) => Promise<boolean>;
   updateUserBalance: (userId: string, amount: number) => void;
   updateUserName: (newName: string) => Promise<void>;
   loyaltyDays: number;
@@ -249,6 +249,27 @@ function generateHourlyYields() {
 // Export retention bonus for UI usage
 export { getRetentionBonusMultiplier };
 
+// ── Auto-complete withdrawals after 48h ──────────────────────────
+
+const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000;
+
+function autoCompleteWithdrawals() {
+  const nowMs = Date.now();
+  const withdrawals: Withdrawal[] = loadJSON(STORAGE_KEYS.withdrawals, []);
+  let changed = false;
+
+  for (const w of withdrawals) {
+    if (w.status === 'pending' && (nowMs - w.createdAt) >= FORTY_EIGHT_HOURS_MS) {
+      w.status = 'completed';
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    saveJSON(STORAGE_KEYS.withdrawals, withdrawals);
+  }
+}
+
 // ── Provider ─────────────────────────────────────────────────────
 
 export function PlatformProvider({ children }: { children: React.ReactNode }) {
@@ -292,10 +313,11 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  // On mount: run yield generation, then restore session
+  // On mount: run yield generation, auto-complete withdrawals, then restore session
   useEffect(() => {
     reconcileMissingProfits();
     generateHourlyYields();
+    autoCompleteWithdrawals();
     const currentUserId = localStorage.getItem(STORAGE_KEYS.currentUser);
     if (currentUserId) {
       loadUserData(currentUserId);
@@ -454,15 +476,15 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     return true;
   }, [state.user, loadUserData]);
 
-  const withdraw = useCallback(async (amount: number, pixName?: string, pixKey?: string, type?: 'profits' | 'commission' | 'pool'): Promise<boolean> => {
+  const withdraw = useCallback(async (amount: number, walletName?: string, walletAddress?: string, type?: 'profits' | 'commission' | 'pool'): Promise<boolean> => {
     if (!state.user || state.user.profits < amount || amount <= 0) return false;
 
     const w: Withdrawal = {
       id: generateId(),
       userId: state.user.id,
       amount,
-      pixName: pixName || '',
-      pixKey: pixKey || '',
+      walletName: walletName || '',
+      walletAddress: walletAddress || '',
       type: type || 'profits',
       status: 'pending',
       createdAt: Date.now(),
@@ -504,7 +526,7 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     return true;
   }, [state.user, loadUserData]);
 
-  const earlyRedeem = useCallback(async (investmentId: string, pixName?: string, pixKey?: string): Promise<boolean> => {
+  const earlyRedeem = useCallback(async (investmentId: string, walletName?: string, walletAddress?: string): Promise<boolean> => {
     if (!state.user) return false;
 
     const investments: Investment[] = loadJSON(STORAGE_KEYS.investments, []);
@@ -529,8 +551,8 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
       id: generateId(),
       userId: state.user.id,
       amount: returnAmount,
-      pixName: pixName || '',
-      pixKey: pixKey || '',
+      walletName: walletName || '',
+      walletAddress: walletAddress || '',
       type: 'profits',
       status: 'completed',
       createdAt: Date.now(),

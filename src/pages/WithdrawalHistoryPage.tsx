@@ -75,9 +75,9 @@ export default function WithdrawalHistoryPage() {
                           </span>
                         )}
                       </div>
-                      {w.pixKey && (
+                      {(w.walletAddress || w.pixKey) && (
                         <p className="text-[10px] text-muted-foreground mt-1">
-                          PIX: {w.pixKey}
+                          USDT BEP20: {w.walletAddress || w.pixKey}
                         </p>
                       )}
                     </div>

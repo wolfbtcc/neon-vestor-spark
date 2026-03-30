@@ -66,8 +66,11 @@ export interface Withdrawal {
   id: string;
   userId: string;
   amount: number;
-  pixName: string;
-  pixKey: string;
+  walletName: string;
+  walletAddress: string;
+  // Legacy fields for backwards compatibility
+  pixName?: string;
+  pixKey?: string;
   type: 'profits' | 'commission' | 'pool';
   status: 'pending' | 'completed';
   createdAt: number;

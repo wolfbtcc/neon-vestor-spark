@@ -11,9 +11,8 @@ export default function RedeemPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [showForm, setShowForm] = useState(false);
-  const [pixName, setPixName] = useState('');
-  const [pixKey, setPixKey] = useState('');
-  const [method, setMethod] = useState<'pix' | 'usdt' | null>(null);
+  const [walletName, setWalletName] = useState('');
+  const [walletAddress, setWalletAddress] = useState('');
 
   if (!user) { navigate('/'); return null; }
 
@@ -40,24 +39,21 @@ export default function RedeemPage() {
   const handleStartRedeem = () => {
     if (!selected) return;
     setShowForm(true);
-    setMethod(null);
-    setPixName('');
-    setPixKey('');
+    setWalletName('');
+    setWalletAddress('');
   };
 
   const handleConfirmRedeem = async () => {
-    if (!selected || !method) return;
-    if (method === 'pix' && (!pixName.trim() || !pixKey.trim())) {
-      toast.error('Preencha Nome e Chave PIX.');
-      return;
-    }
+    if (!selected) return;
+    if (!walletName.trim()) { toast.error('Informe o nome completo.'); return; }
+    if (!walletAddress.trim()) { toast.error('Informe o endereço da carteira BEP20.'); return; }
+    if (!/^0x[a-fA-F0-9]{40}$/.test(walletAddress.trim())) { toast.error('Endereço BEP20 inválido.'); return; }
     setConfirming(true);
-    const success = await earlyRedeem(selected.id, pixName, pixKey);
+    const success = await earlyRedeem(selected.id, walletName, walletAddress);
     if (success) {
-      toast.success('Resgate solicitado! Aguarde 24h para confirmação.');
+      toast.success('Resgate solicitado! Processamento em até 48h.');
       setSelectedId(null);
       setShowForm(false);
-      setMethod(null);
     } else {
       toast.error('Erro ao resgatar.');
     }
@@ -110,7 +106,7 @@ export default function RedeemPage() {
             return (
               <div key={inv.id}>
                 <button
-                  onClick={() => { setSelectedId(isSelected ? null : inv.id); setShowForm(false); setMethod(null); }}
+                  onClick={() => { setSelectedId(isSelected ? null : inv.id); setShowForm(false); }}
                   className={`w-full rounded-2xl p-5 border transition-all duration-300 text-left ${
                     isSelected
                       ? 'border-neon-cyan/60 bg-neon-cyan/10 shadow-[0_0_20px_rgba(0,245,255,0.15)]'
@@ -201,80 +197,42 @@ export default function RedeemPage() {
                   </div>
                 )}
 
-                {/* Payment method form */}
                 {isSelected && showForm && (
                   <div className="mt-3 rounded-2xl border border-border/50 bg-card/80 p-5 space-y-4 animate-in slide-in-from-top-2 duration-300">
-                    <p className="text-sm font-semibold text-foreground">Escolha como receber:</p>
-                    <div className="grid grid-cols-2 gap-3">
-                      <button
-                        onClick={() => setMethod('pix')}
-                        className={`p-4 rounded-xl border text-center transition-all ${
-                          method === 'pix' ? 'border-neon-cyan/60 bg-neon-cyan/10' : 'border-border hover:border-neon-cyan/30'
-                        }`}
-                      >
-                        <span className="text-2xl block mb-1">🇧🇷</span>
-                        <span className="font-semibold text-sm">PIX</span>
-                      </button>
-                      <button
-                        onClick={() => setMethod('usdt')}
-                        className={`p-4 rounded-xl border text-center transition-all ${
-                          method === 'usdt' ? 'border-neon-cyan/60 bg-neon-cyan/10' : 'border-border hover:border-neon-cyan/30'
-                        }`}
-                      >
-                        <span className="text-2xl block mb-1">💰</span>
-                        <span className="font-semibold text-sm">USDT (BEP20)</span>
-                      </button>
-                    </div>
-
-                    {method === 'pix' && (
-                      <div className="space-y-3">
-                        <div>
-                          <label className="text-xs text-muted-foreground mb-1 block">Nome Completo</label>
-                          <input
-                            value={pixName} onChange={e => setPixName(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl bg-muted border border-border text-sm text-foreground focus:border-neon-cyan/50 focus:outline-none transition-colors"
-                            placeholder="Seu nome completo"
-                          />
-                        </div>
-                        <div>
-                          <label className="text-xs text-muted-foreground mb-1 block">Chave PIX</label>
-                          <input
-                            value={pixKey} onChange={e => setPixKey(e.target.value)}
-                            className="w-full px-4 py-3 rounded-xl bg-muted border border-border text-sm text-foreground focus:border-neon-cyan/50 focus:outline-none transition-colors"
-                            placeholder="CPF, e-mail, telefone ou chave aleatória"
-                          />
-                        </div>
+                    <p className="text-sm font-semibold text-foreground">Recebimento via USDT (BEP20)</p>
+                    <div className="space-y-3">
+                      <div>
+                        <label className="text-xs text-muted-foreground mb-1 block">Nome Completo</label>
+                        <input
+                          value={walletName} onChange={e => setWalletName(e.target.value)}
+                          className="w-full px-4 py-3 rounded-xl bg-muted border border-border text-sm text-foreground focus:border-neon-cyan/50 focus:outline-none transition-colors"
+                          placeholder="Seu nome completo"
+                        />
                       </div>
-                    )}
-
-                    {method === 'usdt' && (
                       <div>
                         <label className="text-xs text-muted-foreground mb-1 block">Endereço da Carteira (BEP20)</label>
                         <input
-                          value={pixKey} onChange={e => setPixKey(e.target.value)}
-                          className="w-full px-4 py-3 rounded-xl bg-muted border border-border text-sm text-foreground focus:border-neon-cyan/50 focus:outline-none transition-colors"
+                          value={walletAddress} onChange={e => setWalletAddress(e.target.value)}
+                          className="w-full px-4 py-3 rounded-xl bg-muted border border-border text-sm text-foreground font-mono focus:border-neon-cyan/50 focus:outline-none transition-colors"
                           placeholder="0x..."
                         />
+                        <p className="text-[10px] text-muted-foreground mt-1">Rede: <span className="font-semibold text-foreground">BEP20 (Binance Smart Chain)</span></p>
                       </div>
-                    )}
+                    </div>
 
-                    {method && (
-                      <>
-                        <div className="flex justify-between text-sm border-t border-border/50 pt-3">
-                          <span className="text-muted-foreground">Valor do resgate</span>
-                          <span className="font-mono font-bold text-neon-cyan">
-                            {formatBRL(inv.amount * (1 - getEarlyFee(inv)))}
-                          </span>
-                        </div>
-                        <button
-                          onClick={handleConfirmRedeem}
-                          disabled={confirming}
-                          className="w-full py-3.5 rounded-xl bg-neon-cyan/20 text-neon-cyan font-semibold text-sm hover:bg-neon-cyan/30 transition-colors active:scale-[0.98] disabled:opacity-50"
-                        >
-                          {confirming ? 'Processando...' : 'Confirmar Resgate'}
-                        </button>
-                      </>
-                    )}
+                    <div className="flex justify-between text-sm border-t border-border/50 pt-3">
+                      <span className="text-muted-foreground">Valor do resgate</span>
+                      <span className="font-mono font-bold text-neon-cyan">
+                        {formatBRL(inv.amount * (1 - getEarlyFee(inv)))}
+                      </span>
+                    </div>
+                    <button
+                      onClick={handleConfirmRedeem}
+                      disabled={confirming}
+                      className="w-full py-3.5 rounded-xl bg-neon-cyan/20 text-neon-cyan font-semibold text-sm hover:bg-neon-cyan/30 transition-colors active:scale-[0.98] disabled:opacity-50"
+                    >
+                      {confirming ? 'Processando...' : 'Confirmar Resgate via USDT'}
+                    </button>
 
                     <button onClick={() => setShowForm(false)} className="text-xs text-muted-foreground hover:text-foreground transition-colors">← Voltar</button>
                   </div>
