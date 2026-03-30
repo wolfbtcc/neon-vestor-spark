@@ -25,7 +25,7 @@ interface PlatformContextType extends PlatformState {
   invest: (amount: number, durationDays: number, returnPercent: number) => Promise<boolean>;
   withdraw: (amount: number, pixName?: string, pixKey?: string, type?: 'profits' | 'commission' | 'pool') => Promise<boolean>;
   redeemCycle: (investmentId: string) => Promise<boolean>;
-  earlyRedeem: (investmentId: string, pixName?: string, pixKey?: string) => Promise<boolean>;
+  earlyRedeem: (investmentId: string, walletName?: string, walletAddress?: string) => Promise<boolean>;
   updateUserBalance: (userId: string, amount: number) => void;
   updateUserName: (newName: string) => Promise<void>;
   loyaltyDays: number;
