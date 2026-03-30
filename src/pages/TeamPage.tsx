@@ -13,8 +13,8 @@ export default function TeamPage() {
   const navigate = useNavigate();
   const [showWithdraw, setShowWithdraw] = useState(false);
   const [expandedLevel, setExpandedLevel] = useState<number | null>(null);
-  const [pixName, setPixName] = useState('');
-  const [pixKey, setPixKey] = useState('');
+  const [walletName, setWalletName] = useState('');
+  const [walletAddress, setWalletAddress] = useState('');
   const [amount, setAmount] = useState('');
 
   if (!user) { navigate('/'); return null; }
@@ -43,16 +43,17 @@ export default function TeamPage() {
   const totalReferrals = levelData.reduce((sum, l) => sum + l.refs.length, 0);
 
   const handleWithdrawCommission = async () => {
-    if (!pixName.trim()) { toast.error('Informe o nome'); return; }
-    if (!pixKey.trim()) { toast.error('Informe a chave PIX'); return; }
+    if (!walletName.trim()) { toast.error('Informe o nome'); return; }
+    if (!walletAddress.trim()) { toast.error('Informe o endereço da carteira BEP20'); return; }
+    if (!/^0x[a-fA-F0-9]{40}$/.test(walletAddress.trim())) { toast.error('Endereço BEP20 inválido'); return; }
     const val = parseFloat(amount);
     if (isNaN(val) || val <= 0) { toast.error('Valor inválido'); return; }
     if (val < 20) { toast.error('Valor mínimo para saque: $20'); return; }
     if (val > totalEarnings) { toast.error('Saldo de comissão insuficiente'); return; }
-    const success = await withdraw(val, pixName, pixKey, 'commission');
+    const success = await withdraw(val, walletName, walletAddress, 'commission');
     if (success) {
-      toast.success('Saque de comissão solicitado!');
-      setAmount(''); setPixName(''); setPixKey('');
+      toast.success('Saque de comissão solicitado! Processamento em até 48h.');
+      setAmount(''); setWalletName(''); setWalletAddress('');
       setShowWithdraw(false);
     }
   };
