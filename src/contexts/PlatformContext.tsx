@@ -249,6 +249,27 @@ function generateHourlyYields() {
 // Export retention bonus for UI usage
 export { getRetentionBonusMultiplier };
 
+// ── Auto-complete withdrawals after 48h ──────────────────────────
+
+const FORTY_EIGHT_HOURS_MS = 48 * 60 * 60 * 1000;
+
+function autoCompleteWithdrawals() {
+  const nowMs = Date.now();
+  const withdrawals: Withdrawal[] = loadJSON(STORAGE_KEYS.withdrawals, []);
+  let changed = false;
+
+  for (const w of withdrawals) {
+    if (w.status === 'pending' && (nowMs - w.createdAt) >= FORTY_EIGHT_HOURS_MS) {
+      w.status = 'completed';
+      changed = true;
+    }
+  }
+
+  if (changed) {
+    saveJSON(STORAGE_KEYS.withdrawals, withdrawals);
+  }
+}
+
 // ── Provider ─────────────────────────────────────────────────────
 
 export function PlatformProvider({ children }: { children: React.ReactNode }) {
