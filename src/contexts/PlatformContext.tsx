@@ -292,10 +292,11 @@ export function PlatformProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
-  // On mount: run yield generation, then restore session
+  // On mount: run yield generation, auto-complete withdrawals, then restore session
   useEffect(() => {
     reconcileMissingProfits();
     generateHourlyYields();
+    autoCompleteWithdrawals();
     const currentUserId = localStorage.getItem(STORAGE_KEYS.currentUser);
     if (currentUserId) {
       loadUserData(currentUserId);
