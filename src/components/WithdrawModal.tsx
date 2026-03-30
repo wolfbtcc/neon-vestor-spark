@@ -68,6 +68,17 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
   const poolFee = poolEarnings * POOL_FEE;
   const poolNet = poolEarnings - poolFee;
 
+  const triggerWithConfirm = (action: () => void) => {
+    setPendingAction(() => action);
+    setShowConfirm(true);
+  };
+
+  const handleConfirmProceed = () => {
+    setShowConfirm(false);
+    pendingAction?.();
+    setPendingAction(null);
+  };
+
   const handleWithdrawProfits = async () => {
     if (!pixName.trim()) { toast.error('Informe o nome'); return; }
     if (!pixKey.trim()) { toast.error('Informe a chave PIX'); return; }
@@ -75,23 +86,27 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
     if (isNaN(val) || val <= 0) { toast.error('Valor inválido'); return; }
     if (val < 20) { toast.error('Valor mínimo para saque: $20'); return; }
     if (val > user.profits) { toast.error('Saldo de lucros insuficiente'); return; }
-    const success = await withdraw(val, pixName, pixKey, 'profits');
-    if (success) {
-      toast.success('Saque solicitado com sucesso!');
-      setAmount(''); setPixName(''); setPixKey('');
-      setMode('choose');
-    }
+    triggerWithConfirm(async () => {
+      const success = await withdraw(val, pixName, pixKey, 'profits');
+      if (success) {
+        toast.success('Saque solicitado com sucesso!');
+        setAmount(''); setPixName(''); setPixKey('');
+        setMode('choose');
+      }
+    });
   };
 
   const handlePoolWithdraw = async () => {
     if (!poolStatus.available) return;
     if (poolNet <= 0) { toast.error('Sem rendimentos disponíveis no Pool.'); return; }
-    const success = await withdraw(poolEarnings, '', '', 'pool');
-    if (success) {
-      toast.success('Saque Pool VX1 solicitado!');
-      setMode('choose');
-      onClose();
-    }
+    triggerWithConfirm(async () => {
+      const success = await withdraw(poolEarnings, '', '', 'pool');
+      if (success) {
+        toast.success('Saque Pool VX1 solicitado!');
+        setMode('choose');
+        onClose();
+      }
+    });
   };
 
   const handlePoolReinvest = async () => {
