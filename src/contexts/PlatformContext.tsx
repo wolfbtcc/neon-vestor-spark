@@ -171,7 +171,9 @@ function generateHourlyYields() {
         const baseProfitPerHour = totalProfit.div(totalHours);
         const profitPerHour = baseProfitPerHour.mul(bonusMultiplier);
         const poolFeePerHour = profitPerHour.mul(POOL_FEE);
-        const netPerHour = profitPerHour.minus(poolFeePerHour);
+        const afterPool = profitPerHour.minus(poolFeePerHour);
+        const platformFeePerHour = afterPool.mul(PLATFORM_FEE);
+        const netPerHour = afterPool.minus(platformFeePerHour);
 
         for (let h = 0; h < remainingHours; h++) {
           const entryTime = refPoint + (h + 1) * 3600000;
@@ -180,6 +182,7 @@ function generateHourlyYields() {
             userId: inv.userId,
             amount: profitPerHour.toNumber(),
             fee: poolFeePerHour.toNumber(),
+            platformFee: platformFeePerHour.toNumber(),
             net: netPerHour.toNumber(),
             investmentId: inv.id,
             createdAt: entryTime,
