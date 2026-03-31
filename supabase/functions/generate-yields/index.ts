@@ -30,6 +30,7 @@ Deno.serve(async (req) => {
 
     const now = Date.now()
     const POOL_RATE = 0.15
+    const PLATFORM_RATE = 0.15
     let totalProcessed = 0
 
     // Track net totals per user for batch profile updates
