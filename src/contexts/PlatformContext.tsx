@@ -36,6 +36,7 @@ const PlatformContext = createContext<PlatformContextType | null>(null);
 
 Decimal.set({ precision: 20, rounding: Decimal.ROUND_DOWN });
 const POOL_FEE = new Decimal('0.15');
+const PLATFORM_FEE = new Decimal('0.15');
 
 // ── localStorage helpers ──────────────────────────────────────────
 
