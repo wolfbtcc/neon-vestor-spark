@@ -99,6 +99,7 @@ export interface ProfitEntry {
   userId: string;
   amount: number;
   fee: number;
+  platformFee?: number;
   net: number;
   investmentId: string;
   createdAt: number;
