@@ -15,6 +15,7 @@ import WithdrawalHistoryPage from "./pages/WithdrawalHistoryPage";
 import CyclesPage from "./pages/CyclesPage";
 import PerformanceBonusPage from "./pages/PerformanceBonusPage";
 import NotFound from "./pages/NotFound";
+import WhatsAppGroupButton from "./components/WhatsAppGroupButton";
 
 const queryClient = new QueryClient();
 
@@ -25,6 +26,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <PlatformProvider>
+            <WhatsAppGroupButton />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<AuthPage />} />
