@@ -114,6 +114,10 @@ export default {
             boxShadow: "0 0 24px hsl(185 100% 50% / 0.25), inset 0 0 20px hsl(185 100% 50% / 0.08)",
           },
         },
+        "bounce-slow": {
+          "0%, 100%": { transform: "perspective(200px) rotateY(-8deg) translateY(0)" },
+          "50%": { transform: "perspective(200px) rotateY(-8deg) translateY(-6px)" },
+        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
