@@ -15,6 +15,7 @@ import WithdrawalHistoryPage from "./pages/WithdrawalHistoryPage";
 import CyclesPage from "./pages/CyclesPage";
 import PerformanceBonusPage from "./pages/PerformanceBonusPage";
 import NotFound from "./pages/NotFound";
+import WhatsAppGroupButton from "./components/WhatsAppGroupButton";
 
 const queryClient = new QueryClient();
 
