@@ -13,26 +13,14 @@ export default function WhatsAppGroupButton() {
       href={GROUP_URL}
       target="_blank"
       rel="noopener noreferrer"
-      className="fixed bottom-20 right-4 z-50 group"
-      aria-label="Grupo Oficial WhatsApp"
+      className="fixed bottom-20 right-4 z-50 flex items-center gap-2 px-3 py-2 rounded-full shadow-[0_0_18px_hsl(var(--neon-cyan)/0.5)] animate-bounce-slow"
+      style={{
+        background: 'linear-gradient(145deg, hsl(var(--neon-cyan)), hsl(var(--neon-blue)))',
+        transform: 'perspective(200px) rotateY(-8deg)',
+      }}
     >
-      <div className="relative flex items-center">
-        {/* Label */}
-        <span className="absolute right-full mr-2 whitespace-nowrap bg-[#25D366] text-white text-[10px] font-bold px-2 py-1 rounded-lg opacity-0 group-hover:opacity-100 transition-opacity duration-200 shadow-lg pointer-events-none">
-          Grupo Oficial
-        </span>
-
-        {/* 3D animated button */}
-        <div
-          className="w-11 h-11 rounded-full flex items-center justify-center shadow-[0_4px_14px_rgba(37,211,102,0.5)] animate-bounce-slow"
-          style={{
-            background: 'linear-gradient(145deg, #25D366, #128C7E)',
-            transform: 'perspective(200px) rotateY(-8deg)',
-          }}
-        >
-          <MessageCircle className="w-5 h-5 text-white drop-shadow-md" fill="white" strokeWidth={0} />
-        </div>
-      </div>
+      <MessageCircle className="w-4 h-4 text-background" fill="hsl(var(--background))" strokeWidth={0} />
+      <span className="text-[10px] font-bold text-background tracking-wide whitespace-nowrap">Grupo Oficial</span>
     </a>
   );
 }
