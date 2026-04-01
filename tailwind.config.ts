@@ -127,6 +127,7 @@ export default {
         "fade-up": "fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards",
         "scale-in": "scale-in 0.3s cubic-bezier(0.16, 1, 0.3, 1) forwards",
         "glow-pulse": "glow-pulse 3s ease-in-out infinite",
+        "bounce-slow": "bounce-slow 2s ease-in-out infinite",
       },
     },
   },

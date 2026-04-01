@@ -26,6 +26,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <PlatformProvider>
+            <WhatsAppGroupButton />
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/auth" element={<AuthPage />} />
