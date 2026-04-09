@@ -1,5 +1,6 @@
 import { usePlatform } from '@/contexts/PlatformContext';
 import { formatBRL } from '@/lib/platform';
+import { toast } from 'sonner';
 import { Lock, CalendarCheck } from 'lucide-react';
 import Decimal from 'decimal.js';
 
@@ -21,7 +22,7 @@ function getPoolStatus() {
 }
 
 export default function LoyaltyPool() {
-  const { user, profitHistory } = usePlatform();
+  const { user, profitHistory, withdraw, invest } = usePlatform();
   const { available, daysLeft } = getPoolStatus();
 
   // Pool balance = sum of all fees from profit history using Decimal.js
@@ -34,6 +35,20 @@ export default function LoyaltyPool() {
   const entryCount = profitHistory.filter(p => p.userId === user?.id).length;
   const barProgress = Math.min(entryCount * 2, 100);
 
+  const handleWithdrawPool = () => {
+    if (!available || poolBalance <= 0) return;
+    if (withdraw(poolBalance)) {
+      toast.success(`Saque Pool VX1: ${formatBRL(poolBalance)}`);
+    }
+  };
+
+  const handleReinvest = () => {
+    if (!available || poolBalance <= 0) return;
+    if (invest(poolBalance, 30, 200)) {
+      toast.success(`Reinvestido: ${formatBRL(poolBalance)} no ciclo 30 dias`);
+    }
+  };
+
   return (
     <div className="neon-card">
       <h3 className="text-sm font-semibold tracking-widest text-muted-foreground uppercase mb-3">Pool VX1</h3>
@@ -43,9 +58,11 @@ export default function LoyaltyPool() {
             <div className="flex justify-between text-xs">
               <span className="text-muted-foreground">Saldo Pool</span>
               <span className="font-mono-data text-neon-cyan font-bold">
-                ${poolBalance < 1
-                  ? poolBalance.toFixed(4)
-                  : formatBRL(poolBalance)}
+                ${poolBalance < 0.01 && poolBalance > 0 
+                  ? poolBalance.toFixed(4) 
+                  : poolBalance < 1 
+                    ? poolBalance.toFixed(4)
+                    : formatBRL(poolBalance)}
               </span>
             </div>
             <div className="w-full h-2.5 bg-muted rounded-full overflow-hidden">
@@ -64,9 +81,27 @@ export default function LoyaltyPool() {
         )}
 
         {available ? (
-          <div className="flex items-center gap-2 text-xs text-neon-green">
-            <CalendarCheck className="w-4 h-4" />
-            <span className="font-semibold">Pool liberado até 22:09 (horário de Brasília)</span>
+          <div className="space-y-3">
+            <div className="flex items-center gap-2 text-xs text-neon-green">
+              <CalendarCheck className="w-4 h-4" />
+              <span className="font-semibold">Liberado até 22:09 (horário de Brasília)</span>
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={handleWithdrawPool}
+                disabled={poolBalance <= 0}
+                className="flex-1 py-2.5 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:brightness-110 transition-all active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none glow-cyan"
+              >
+                Sacar
+              </button>
+              <button
+                onClick={handleReinvest}
+                disabled={poolBalance <= 0}
+                className="flex-1 py-2.5 rounded-xl text-xs font-semibold border border-primary/40 text-primary hover:bg-primary/10 transition-all active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none"
+              >
+                Reinvestir
+              </button>
+            </div>
           </div>
         ) : (
           <div className="flex items-center gap-2 text-xs text-muted-foreground">

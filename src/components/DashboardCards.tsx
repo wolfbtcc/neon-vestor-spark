@@ -1,44 +1,38 @@
 import { formatBRL } from '@/lib/platform';
 import { usePlatform } from '@/contexts/PlatformContext';
-import { Wallet, TrendingUp, DollarSign, Percent } from 'lucide-react';
+import { Wallet, TrendingUp, DollarSign, Zap } from 'lucide-react';
 
 export default function DashboardCards() {
-  const { user } = usePlatform();
+  const { user, investments } = usePlatform();
   if (!user) return null;
 
-  const dailyYield = user.invested * 0.006;
+  const activeCycles = investments.filter(i => i.userId === user.id && i.status === 'active').length;
 
   const cards = [
     {
       label: 'SALDO DISPONÍVEL',
-      value: formatBRL(user.balance),
-      sub: 'Saldo total na plataforma',
+      value: formatBRL(user.profits),
+      sub: 'Apenas lucros disponíveis',
       icon: Wallet,
       highlight: true,
     },
     {
       label: 'CAPITAL INVESTIDO',
       value: formatBRL(user.invested),
-      sub: 'Base de rendimento diário',
+      sub: 'Total depositado em ciclos',
       icon: TrendingUp,
     },
     {
-      label: 'LUCROS ACUMULADOS',
+      label: 'LUCROS',
       value: formatBRL(user.profits),
-      sub: 'Total de rendimentos recebidos',
+      sub: 'Rendimentos gerados',
       icon: DollarSign,
-    },
-    {
-      label: 'RENDIMENTO DIÁRIO',
-      value: formatBRL(dailyYield),
-      sub: '0.6% ao dia sobre capital investido',
-      icon: Percent,
-      isYield: true,
     },
   ];
 
   return (
     <div className="space-y-3">
+      {/* Value cards */}
       {cards.map((card, i) => {
         const Icon = card.icon;
         return (
@@ -51,10 +45,10 @@ export default function DashboardCards() {
               <span className="text-xs font-semibold tracking-widest text-foreground/80 uppercase">
                 {card.label}
               </span>
-              <Icon className={`w-5 h-5 flex-shrink-0 opacity-70 ${card.isYield ? 'text-neon-green' : 'text-neon-cyan'}`} />
+              <Icon className="w-5 h-5 flex-shrink-0 text-neon-cyan opacity-70" />
             </div>
             <p
-              className={`font-bold font-mono-data leading-tight overflow-hidden text-ellipsis whitespace-nowrap text-xl ${card.isYield ? 'text-neon-green' : 'text-neon-cyan'} ${card.highlight ? 'animate-pulse-neon' : ''}`}
+              className={`font-bold font-mono-data leading-tight overflow-hidden text-ellipsis whitespace-nowrap text-xl text-neon-cyan ${card.highlight ? 'animate-pulse-neon' : ''}`}
             >
               {card.value}
             </p>
@@ -62,6 +56,27 @@ export default function DashboardCards() {
           </div>
         );
       })}
+
+      {/* Motor VX1 - always visible, fixed card */}
+      <div
+        className={`neon-card overflow-hidden opacity-0 animate-fade-up ${activeCycles > 0 ? 'animate-glow-pulse' : ''}`}
+        style={{ animationDelay: `${3 * 80}ms`, animationFillMode: 'forwards' }}
+      >
+        <div className="flex items-center justify-between mb-2">
+          <span className="text-xs font-semibold tracking-widest text-foreground/80 uppercase">
+            MOTOR VX1
+          </span>
+          <Zap className={`w-5 h-5 flex-shrink-0 ${activeCycles > 0 ? 'text-neon-green animate-pulse-glow' : 'text-neon-cyan'} opacity-70`} />
+        </div>
+        <p
+          className={`font-bold font-mono-data leading-tight text-xl ${
+            activeCycles > 0 ? 'text-neon-green' : 'text-foreground/50'
+          }`}
+        >
+          {activeCycles > 0 ? 'ATIVO' : 'INATIVO'}
+        </p>
+        <p className="text-xs text-foreground/60 mt-1">{activeCycles} ciclo(s) ativo(s)</p>
+      </div>
     </div>
   );
 }

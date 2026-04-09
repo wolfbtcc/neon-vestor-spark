@@ -10,7 +10,9 @@ import Dashboard from "./pages/Dashboard";
 import AdminPage from "./pages/AdminPage";
 import ProfilePage from "./pages/ProfilePage";
 import TeamPage from "./pages/TeamPage";
+import RedeemPage from "./pages/RedeemPage";
 import WithdrawalHistoryPage from "./pages/WithdrawalHistoryPage";
+import CyclesPage from "./pages/CyclesPage";
 import PerformanceBonusPage from "./pages/PerformanceBonusPage";
 import NotFound from "./pages/NotFound";
 import WhatsAppGroupButton from "./components/WhatsAppGroupButton";
@@ -32,7 +34,9 @@ const App = () => (
               <Route path="/admin" element={<AdminPage />} />
               <Route path="/profile" element={<ProfilePage />} />
               <Route path="/team" element={<TeamPage />} />
+              <Route path="/redeem" element={<RedeemPage />} />
               <Route path="/withdrawal-history" element={<WithdrawalHistoryPage />} />
+              <Route path="/cycles" element={<CyclesPage />} />
               <Route path="/bonus" element={<PerformanceBonusPage />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
