@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { usePlatform } from '@/contexts/PlatformContext';
-import { formatBRL, CYCLES } from '@/lib/platform';
-import { X, Copy, Upload, MessageCircle, Zap } from 'lucide-react';
+import { formatBRL } from '@/lib/platform';
+import { X, Copy, Upload, MessageCircle, CheckCircle2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface DepositModalProps {
@@ -13,12 +13,11 @@ const PRESET_AMOUNTS = [5, 10, 20, 30, 50, 100, 200, 500, 1000, 2000, 3000, 5000
 const USDT_WALLET = '0xA1b2C3d4E5f6789012345678AbCdEf9876543210';
 
 export default function DepositModal({ open, onClose }: DepositModalProps) {
-  const { deposit, invest } = usePlatform();
-  const [step, setStep] = useState<'amount' | 'method' | 'pix' | 'usdt' | 'processing' | 'cycle'>('amount');
+  const { deposit } = usePlatform();
+  const [step, setStep] = useState<'amount' | 'method' | 'pix' | 'usdt' | 'processing' | 'done'>('amount');
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [receipt, setReceipt] = useState<File | null>(null);
   const [receiptHash, setReceiptHash] = useState<string | null>(null);
-  const [depositMethod, setDepositMethod] = useState<'pix' | 'usdt'>('pix');
   const fileRef = useRef<HTMLInputElement>(null);
 
   const usedHashesKey = 'vortex_used_receipts';
@@ -62,26 +61,14 @@ export default function DepositModal({ open, onClose }: DepositModalProps) {
     usedHashes.push(receiptHash);
     localStorage.setItem(usedHashesKey, JSON.stringify(usedHashes));
 
-    setDepositMethod(method);
     setStep('processing');
     toast.info('Depósito confirmado, aguarde processamento...');
 
     setTimeout(async () => {
       await deposit(selectedAmount, method);
-      toast.success(`Depósito de ${formatBRL(selectedAmount)} creditado!`);
-      setStep('cycle');
+      toast.success(`Depósito de ${formatBRL(selectedAmount)} creditado! Rendimento diário de 0.6% já ativo.`);
+      setStep('done');
     }, 5000);
-  };
-
-  const handleSelectCycle = async (cycle: typeof CYCLES[0]) => {
-    if (!selectedAmount) return;
-    const success = await invest(selectedAmount, cycle.days, cycle.returnPercent);
-    if (success) {
-      toast.success(`Investido ${formatBRL(selectedAmount)} no ${cycle.name} (${cycle.returnPercent}% em ${cycle.label})`);
-      reset();
-    } else {
-      toast.error('Erro ao investir. Saldo insuficiente.');
-    }
   };
 
   const reset = () => {
@@ -92,8 +79,6 @@ export default function DepositModal({ open, onClose }: DepositModalProps) {
     if (fileRef.current) fileRef.current.value = '';
     onClose();
   };
-
-  const cycleIcons = ['⚡', '🌊', '💎', '🔥'];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={reset}>
@@ -106,9 +91,7 @@ export default function DepositModal({ open, onClose }: DepositModalProps) {
           <X className="w-5 h-5" />
         </button>
 
-        <h2 className="text-lg font-display font-bold mb-5 gradient-text-cyan tracking-wide">
-          {step === 'cycle' ? 'ESCOLHA O CICLO' : 'DEPOSITAR'}
-        </h2>
+        <h2 className="text-lg font-display font-bold mb-5 gradient-text-cyan tracking-wide">DEPOSITAR</h2>
 
         {/* Step 1: Preset amounts */}
         {step === 'amount' && (
@@ -225,47 +208,20 @@ export default function DepositModal({ open, onClose }: DepositModalProps) {
             <div className="w-12 h-12 mx-auto rounded-full border-2 border-neon-cyan/50 border-t-neon-cyan animate-spin" />
             <p className="text-sm text-foreground font-semibold">Depósito confirmado</p>
             <p className="text-xs text-muted-foreground">Aguarde processamento...</p>
-            <div className="flex items-center gap-2 justify-center text-xs text-muted-foreground">
-              <div className="w-2 h-2 rounded-full bg-neon-cyan animate-pulse-glow" />
-              Processando...
-            </div>
           </div>
         )}
 
-        {/* Step: Cycle selection */}
-        {step === 'cycle' && selectedAmount && (
-          <div className="space-y-4">
+        {/* Done */}
+        {step === 'done' && (
+          <div className="space-y-4 text-center py-6">
+            <CheckCircle2 className="w-12 h-12 mx-auto text-neon-green" />
+            <p className="text-sm text-foreground font-semibold">Depósito creditado com sucesso!</p>
             <p className="text-xs text-muted-foreground">
-              Valor depositado: <span className="font-mono-data text-neon-cyan font-bold">{formatBRL(selectedAmount)}</span>
+              Seu capital já está rendendo <span className="text-neon-green font-bold">0.6% ao dia</span> automaticamente.
             </p>
-            <p className="text-xs text-muted-foreground">Escolha o ciclo de rendimento:</p>
-            <div className="space-y-3">
-              {CYCLES.map((cycle, idx) => (
-                <button
-                  key={cycle.days}
-                  onClick={() => handleSelectCycle(cycle)}
-                  className="w-full p-4 rounded-xl border border-border hover:border-neon-cyan/50 hover:bg-neon-cyan/5 transition-all active:scale-[0.98] text-left group"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-neon-cyan/10 border border-neon-cyan/20 flex items-center justify-center text-lg flex-shrink-0 group-hover:bg-neon-cyan/20 transition-colors">
-                      {cycleIcons[idx]}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 mb-0.5">
-                        <span className="font-display font-bold text-sm text-foreground">{cycle.name}</span>
-                        <Zap className="w-3 h-3 text-neon-cyan" />
-                      </div>
-                      <p className="text-[11px] text-muted-foreground">
-                        Ciclo {cycle.label} – <span className="text-neon-green font-bold">{cycle.returnPercent}% retorno</span>
-                      </p>
-                      <p className="text-[10px] text-muted-foreground mt-0.5">
-                        Lucro estimado: <span className="font-mono-data text-neon-cyan">{formatBRL(selectedAmount * (cycle.returnPercent / 100))}</span>
-                      </p>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
+            <button onClick={reset} className="px-6 py-2.5 rounded-xl bg-primary text-primary-foreground font-semibold text-sm hover:brightness-110 transition-all">
+              Voltar ao Dashboard
+            </button>
           </div>
         )}
       </div>
