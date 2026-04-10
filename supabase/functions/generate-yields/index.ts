@@ -74,7 +74,7 @@ Deno.serve(async (req) => {
 
       const totalProfit = amount * (returnPct / 100)
       const durationSeconds = durationDays * 86400
-      const totalIntervals = durationSeconds / 60
+      const totalIntervals = durationSeconds / 3600
       const profitPerInterval = totalProfit / totalIntervals
 
       const poolPerInterval = profitPerInterval * POOL_RATE
@@ -82,10 +82,10 @@ Deno.serve(async (req) => {
       const platformFeePerInterval = afterPool * PLATFORM_RATE
       const netPerInterval = afterPool - platformFeePerInterval
 
-      // Create individual entries for each 60s interval
+      // Create individual entries for each 1-hour interval
       const rows = []
       for (let i = 0; i < intervals; i++) {
-        const entryTime = new Date(lastTime + (i + 1) * 60000).toISOString()
+        const entryTime = new Date(lastTime + (i + 1) * 3600000).toISOString()
         rows.push({
           user_id: inv.user_id,
           amount: profitPerInterval,
