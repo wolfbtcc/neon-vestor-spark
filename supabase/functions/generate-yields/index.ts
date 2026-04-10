@@ -61,13 +61,13 @@ Deno.serve(async (req) => {
       const effectiveNow = Math.min(now, endDate)
       const elapsedMs = effectiveNow - lastTime
 
-      // Need at least 60 seconds elapsed
-      if (elapsedMs < 60000) continue
+      // Need at least 1 hour elapsed
+      if (elapsedMs < 3600000) continue
 
-      const intervals = Math.floor(elapsedMs / 60000)
+      const intervals = Math.floor(elapsedMs / 3600000)
       if (intervals <= 0) continue
 
-      // Precise calculation per 60s interval
+      // Precise calculation per 1-hour interval
       const amount = inv.amount
       const returnPct = inv.return_percent
       const durationDays = inv.duration_days
