@@ -110,7 +110,7 @@ export default function WithdrawModal({ open, onClose }: WithdrawModalProps) {
 
           <div className="p-3 rounded-xl bg-primary/5 border border-primary/20 flex items-center gap-2">
             <Shield className="w-4 h-4 text-primary flex-shrink-0" />
-            <p className="text-[10px] text-muted-foreground">Saque exclusivo via <span className="text-primary font-semibold">USDT (BEP20)</span> • Processamento em até 48h • Apenas às sextas-feiras</p>
+            <p className="text-[10px] text-muted-foreground">Saque exclusivo via <span className="text-primary font-semibold">USDT (BEP20)</span> • Processamento em até 48h • Apenas no dia 10 de cada mês</p>
           </div>
 
           <p className="text-xs text-muted-foreground">Lucros disponíveis: <span className="font-mono-data text-neon-cyan">{formatBRL(user.profits)}</span></p>
