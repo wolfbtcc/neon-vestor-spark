@@ -1,38 +1,37 @@
 import { formatBRL } from '@/lib/platform';
 import { usePlatform } from '@/contexts/PlatformContext';
-import { Wallet, TrendingUp, DollarSign, Zap } from 'lucide-react';
+import { Wallet, TrendingUp, DollarSign, Percent } from 'lucide-react';
 
 export default function DashboardCards() {
-  const { user, investments } = usePlatform();
+  const { user } = usePlatform();
   if (!user) return null;
 
-  const activeCycles = investments.filter(i => i.userId === user.id && i.status === 'active').length;
+  const dailyYield = user.invested * 0.01 * 0.70; // 1% daily, 70% to user
 
   const cards = [
     {
       label: 'SALDO DISPONÍVEL',
       value: formatBRL(user.profits),
-      sub: 'Apenas lucros disponíveis',
+      sub: 'Lucros disponíveis para saque',
       icon: Wallet,
       highlight: true,
     },
     {
       label: 'CAPITAL INVESTIDO',
       value: formatBRL(user.invested),
-      sub: 'Total depositado em ciclos',
+      sub: 'Saldo ativo gerando rendimento',
       icon: TrendingUp,
     },
     {
-      label: 'LUCROS',
-      value: formatBRL(user.profits),
-      sub: 'Rendimentos gerados',
-      icon: DollarSign,
+      label: 'RENDIMENTO DIÁRIO',
+      value: formatBRL(dailyYield),
+      sub: '1% ao dia (70% líquido)',
+      icon: Percent,
     },
   ];
 
   return (
     <div className="space-y-3">
-      {/* Value cards */}
       {cards.map((card, i) => {
         const Icon = card.icon;
         return (
@@ -56,27 +55,6 @@ export default function DashboardCards() {
           </div>
         );
       })}
-
-      {/* Motor VX1 - always visible, fixed card */}
-      <div
-        className={`neon-card overflow-hidden opacity-0 animate-fade-up ${activeCycles > 0 ? 'animate-glow-pulse' : ''}`}
-        style={{ animationDelay: `${3 * 80}ms`, animationFillMode: 'forwards' }}
-      >
-        <div className="flex items-center justify-between mb-2">
-          <span className="text-xs font-semibold tracking-widest text-foreground/80 uppercase">
-            MOTOR VX1
-          </span>
-          <Zap className={`w-5 h-5 flex-shrink-0 ${activeCycles > 0 ? 'text-neon-green animate-pulse-glow' : 'text-neon-cyan'} opacity-70`} />
-        </div>
-        <p
-          className={`font-bold font-mono-data leading-tight text-xl ${
-            activeCycles > 0 ? 'text-neon-green' : 'text-foreground/50'
-          }`}
-        >
-          {activeCycles > 0 ? 'ATIVO' : 'INATIVO'}
-        </p>
-        <p className="text-xs text-foreground/60 mt-1">{activeCycles} ciclo(s) ativo(s)</p>
-      </div>
     </div>
   );
 }

@@ -4,18 +4,17 @@ import { useLanguage } from '@/contexts/LanguageContext';
 import { useNavigate } from 'react-router-dom';
 import DashboardCards from '@/components/DashboardCards';
 import LoyaltyPool from '@/components/LoyaltyPool';
-import ActiveCycles from '@/components/ActiveCycles';
 import AffiliatePanel from '@/components/AffiliatePanel';
 import DashboardCarousel from '@/components/DashboardCarousel';
 import ProfitHistory from '@/components/ProfitHistory';
 import DepositModal from '@/components/DepositModal';
 import WithdrawModal from '@/components/WithdrawModal';
 import LanguageSelector from '@/components/LanguageSelector';
-import { LogOut, ArrowDownToLine, ArrowUpFromLine, Gift, ShieldAlert, Menu, X, User, Users, History, RefreshCw, Trophy } from 'lucide-react';
+import { LogOut, ArrowDownToLine, ArrowUpFromLine, Menu, X, User, Users, History, Trophy, ShieldAlert } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Dashboard() {
-  const { user, logout, loading } = usePlatform();
+  const { user, logout, loading, invest } = usePlatform();
   const { t } = useLanguage();
   const navigate = useNavigate();
   const [depositOpen, setDepositOpen] = useState(false);
@@ -29,8 +28,15 @@ export default function Dashboard() {
     return null;
   }
 
-  const handleRedeem = () => {
-    navigate('/redeem');
+  const handleInvest = async () => {
+    if (user.balance <= 0) {
+      toast.error('Saldo insuficiente. Faça um depósito primeiro.');
+      return;
+    }
+    const success = await invest(user.balance);
+    if (success) {
+      toast.success(`Investido ${user.balance.toFixed(2)} USDT com rendimento diário de 1%`);
+    }
   };
 
   return (
@@ -85,13 +91,6 @@ export default function Dashboard() {
                       <span className="text-sm text-foreground">{t('dash.history')}</span>
                     </button>
                     <button
-                      onClick={() => { setMenuOpen(false); navigate('/cycles'); }}
-                      className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors text-left"
-                    >
-                      <RefreshCw className="w-4 h-4 text-neon-cyan" />
-                      <span className="text-sm text-foreground">{t('dash.cycles')}</span>
-                    </button>
-                    <button
                       onClick={() => { setMenuOpen(false); navigate('/bonus'); }}
                       className="w-full flex items-center gap-3 px-4 py-3 hover:bg-muted/50 transition-colors text-left"
                     >
@@ -126,7 +125,7 @@ export default function Dashboard() {
         <DashboardCards />
 
         {/* Action buttons */}
-        <div className="grid grid-cols-3 gap-3">
+        <div className="grid grid-cols-2 gap-3">
           <button
             onClick={() => setDepositOpen(true)}
             className="flex flex-col items-center gap-1.5 py-3 rounded-2xl neon-card hover:glow-border-cyan transition-all active:scale-[0.97]"
@@ -141,16 +140,18 @@ export default function Dashboard() {
             <ArrowUpFromLine className="w-5 h-5 text-neon-cyan" />
             <span className="text-xs font-semibold text-foreground">{t('dash.withdraw')}</span>
           </button>
-          <button
-            onClick={handleRedeem}
-            className="flex flex-col items-center gap-1.5 py-3 rounded-2xl neon-card hover:glow-border-cyan transition-all active:scale-[0.97]"
-          >
-            <Gift className="w-5 h-5 text-neon-green" />
-            <span className="text-xs font-semibold text-foreground">{t('dash.redeem')}</span>
-          </button>
         </div>
 
-        <ActiveCycles />
+        {/* Invest button - only show if user has balance */}
+        {user.balance > 0 && (
+          <button
+            onClick={handleInvest}
+            className="w-full py-3 rounded-2xl bg-neon-cyan/20 text-neon-cyan font-semibold text-sm hover:bg-neon-cyan/30 transition-all active:scale-[0.98] border border-neon-cyan/30"
+          >
+            Investir Saldo ({new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(user.balance)}) • 1% ao dia
+          </button>
+        )}
+
         <ProfitHistory />
         <LoyaltyPool />
       </main>

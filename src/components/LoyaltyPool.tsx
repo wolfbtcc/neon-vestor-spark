@@ -1,114 +1,65 @@
 import { usePlatform } from '@/contexts/PlatformContext';
 import { formatBRL } from '@/lib/platform';
-import { toast } from 'sonner';
 import { Lock, CalendarCheck } from 'lucide-react';
-import Decimal from 'decimal.js';
 
-function getBrazilNow(): Date {
-  return new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
-}
-
-function getPoolStatus() {
-  const now = getBrazilNow();
+function isPoolWithdrawAvailable(): { available: boolean; message: string } {
+  const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'America/Sao_Paulo' }));
   const day = now.getDate();
-  const totalMinutes = now.getHours() * 60 + now.getMinutes();
-  if (day === 5 && totalMinutes <= 1329) {
-    return { available: true, daysLeft: 0 };
+  const hours = now.getHours();
+  const minutes = now.getMinutes();
+  const totalMinutes = hours * 60 + minutes;
+
+  if (day === 5) {
+    if (totalMinutes <= 1329) {
+      return { available: true, message: 'Pool liberado hoje até 22:09 (horário de Brasília).' };
+    }
+    return { available: false, message: 'Janela do Pool encerrada hoje às 22:09. Aguarde o dia 5 do próximo mês.' };
   }
-  const nextDate = day < 5
-    ? new Date(now.getFullYear(), now.getMonth(), 5)
-    : new Date(now.getFullYear(), now.getMonth() + 1, 5);
-  return { available: false, daysLeft: Math.ceil((nextDate.getTime() - now.getTime()) / 86400000) };
+
+  const currentMonth = now.getMonth();
+  const currentYear = now.getFullYear();
+  let nextDate: Date;
+  if (day < 5) {
+    nextDate = new Date(currentYear, currentMonth, 5);
+  } else {
+    nextDate = new Date(currentYear, currentMonth + 1, 5);
+  }
+  const daysLeft = Math.ceil((nextDate.getTime() - now.getTime()) / 86400000);
+
+  return { available: false, message: `Saque/reinvestimento do Pool disponível apenas no dia 5 de cada mês (00:00–22:09 horário de Brasília). Faltam ${daysLeft} dia(s).` };
 }
 
 export default function LoyaltyPool() {
-  const { user, profitHistory, withdraw, invest } = usePlatform();
-  const { available, daysLeft } = getPoolStatus();
+  const { user, profitHistory } = usePlatform();
+  if (!user) return null;
 
-  // Pool balance = sum of all fees from profit history using Decimal.js
-  const poolBalance = profitHistory
-    .filter(p => p.userId === user?.id)
-    .reduce((sum, p) => sum.plus(new Decimal(p.fee)), new Decimal(0))
-    .toNumber();
+  const userProfits = profitHistory.filter(p => p.userId === user.id);
+  const poolBalance = userProfits.reduce((sum, p) => sum + (p.fee || 0), 0);
 
-  // Progress bar grows with each yield entry (capped at 100%)
-  const entryCount = profitHistory.filter(p => p.userId === user?.id).length;
-  const barProgress = Math.min(entryCount * 2, 100);
-
-  const handleWithdrawPool = () => {
-    if (!available || poolBalance <= 0) return;
-    if (withdraw(poolBalance)) {
-      toast.success(`Saque Pool VX1: ${formatBRL(poolBalance)}`);
-    }
-  };
-
-  const handleReinvest = () => {
-    if (!available || poolBalance <= 0) return;
-    if (invest(poolBalance, 30, 200)) {
-      toast.success(`Reinvestido: ${formatBRL(poolBalance)} no ciclo 30 dias`);
-    }
-  };
+  const poolStatus = isPoolWithdrawAvailable();
+  const available = poolStatus.available;
 
   return (
     <div className="neon-card">
       <h3 className="text-sm font-semibold tracking-widest text-muted-foreground uppercase mb-3">Pool VX1</h3>
       <div className="space-y-3">
-        {poolBalance > 0 ? (
-          <>
-            <div className="flex justify-between text-xs">
-              <span className="text-muted-foreground">Saldo Pool</span>
-              <span className="font-mono-data text-neon-cyan font-bold">
-                ${poolBalance < 0.01 && poolBalance > 0 
-                  ? poolBalance.toFixed(4) 
-                  : poolBalance < 1 
-                    ? poolBalance.toFixed(4)
-                    : formatBRL(poolBalance)}
-              </span>
-            </div>
-            <div className="w-full h-2.5 bg-muted rounded-full overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-1000 ease-out"
-                style={{
-                  width: `${barProgress}%`,
-                  background: 'linear-gradient(90deg, hsl(185 100% 50%), hsl(200 100% 55%))',
-                  boxShadow: '0 0 12px hsl(185 100% 50% / 0.6), 0 0 4px hsl(185 100% 50% / 0.3)',
-                }}
-              />
-            </div>
-          </>
-        ) : (
-          <p className="text-xs text-muted-foreground">Nenhum rendimento acumulado.</p>
-        )}
-
-        {available ? (
-          <div className="space-y-3">
-            <div className="flex items-center gap-2 text-xs text-neon-green">
-              <CalendarCheck className="w-4 h-4" />
-              <span className="font-semibold">Liberado até 22:09 (horário de Brasília)</span>
-            </div>
-            <div className="flex gap-2">
-              <button
-                onClick={handleWithdrawPool}
-                disabled={poolBalance <= 0}
-                className="flex-1 py-2.5 rounded-xl text-xs font-semibold bg-primary text-primary-foreground hover:brightness-110 transition-all active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none glow-cyan"
-              >
-                Sacar
-              </button>
-              <button
-                onClick={handleReinvest}
-                disabled={poolBalance <= 0}
-                className="flex-1 py-2.5 rounded-xl text-xs font-semibold border border-primary/40 text-primary hover:bg-primary/10 transition-all active:scale-[0.97] disabled:opacity-40 disabled:pointer-events-none"
-              >
-                Reinvestir
-              </button>
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <Lock className="w-3.5 h-3.5 flex-shrink-0" />
-            <span>Liberado dia 5 (00:00–22:09). Faltam {daysLeft} dia(s).</span>
-          </div>
-        )}
+        <div className="flex items-center justify-between">
+          <span className="text-xs text-muted-foreground">Saldo acumulado</span>
+          <span className="font-mono-data font-bold text-neon-cyan">{formatBRL(poolBalance)}</span>
+        </div>
+        <div className="flex items-center gap-2 text-xs">
+          {available ? (
+            <>
+              <CalendarCheck className="w-3.5 h-3.5 text-neon-green" />
+              <span className="text-neon-green">{poolStatus.message}</span>
+            </>
+          ) : (
+            <>
+              <Lock className="w-3.5 h-3.5 text-muted-foreground" />
+              <span className="text-muted-foreground">{poolStatus.message}</span>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );

@@ -15,129 +15,73 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!
     const supabase = createClient(supabaseUrl, serviceRoleKey)
 
-    // Get all active investments
-    const { data: activeInvestments, error: invError } = await supabase
-      .from('investments')
-      .select('*')
-      .eq('status', 'active')
+    const today = new Date().toISOString().slice(0, 10) // YYYY-MM-DD
 
-    if (invError) throw invError
-    if (!activeInvestments || activeInvestments.length === 0) {
-      return new Response(JSON.stringify({ message: 'No active investments', processed: 0 }), {
+    // Get all profiles with invested > 0
+    const { data: profiles, error: profilesError } = await supabase
+      .from('profiles')
+      .select('user_id, invested, profits, balance')
+      .gt('invested', 0)
+
+    if (profilesError) throw profilesError
+    if (!profiles || profiles.length === 0) {
+      return new Response(JSON.stringify({ message: 'No users with active balance', processed: 0 }), {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       })
     }
 
-    const now = Date.now()
-    const POOL_RATE = 0.15
-    const PLATFORM_RATE = 0.15
+    const DAILY_RATE = 0.01 // 1% per day
+    const USER_SHARE = 0.70 // 70% to user
+    const PLATFORM_SHARE = 0.30 // 30% platform fee
     let totalProcessed = 0
 
-    // Track net totals per user for batch profile updates
-    const userUpdates: Record<string, number> = {}
-
-    for (const inv of activeInvestments) {
-      const endDate = new Date(inv.end_date).getTime()
-      const startDate = new Date(inv.start_date).getTime()
-
-      // Check if investment has ended
-      if (now >= endDate) {
-        await supabase.from('investments').update({ status: 'completed' }).eq('id', inv.id)
-      }
-
-      // Find last profit entry for this investment
-      const { data: lastProfit } = await supabase
+    for (const profile of profiles) {
+      // Check if yield already generated today for this user
+      const { data: existing } = await supabase
         .from('profit_history')
-        .select('created_at')
-        .eq('investment_id', inv.id)
-        .order('created_at', { ascending: false })
+        .select('id')
+        .eq('user_id', profile.user_id)
+        .gte('created_at', `${today}T00:00:00Z`)
+        .lt('created_at', `${today}T23:59:59Z`)
         .limit(1)
 
-      const lastTime = lastProfit && lastProfit.length > 0
-        ? new Date(lastProfit[0].created_at).getTime()
-        : startDate
+      if (existing && existing.length > 0) continue // Already processed today
 
-      // Calculate effective end time (don't generate past end date)
-      const effectiveNow = Math.min(now, endDate)
-      const elapsedMs = effectiveNow - lastTime
+      const grossProfit = profile.invested * DAILY_RATE
+      const platformFee = grossProfit * PLATFORM_SHARE
+      const netProfit = grossProfit * USER_SHARE
 
-      // Need at least 1 hour elapsed
-      if (elapsedMs < 3600000) continue
+      // Insert profit history entry
+      const { error: insertError } = await supabase.from('profit_history').insert({
+        user_id: profile.user_id,
+        amount: grossProfit,
+        fee: 0, // No pool fee in new model
+        platform_fee: platformFee,
+        net: netProfit,
+        investment_id: null, // No longer tied to specific investment
+        created_at: new Date().toISOString(),
+      })
 
-      const intervals = Math.floor(elapsedMs / 3600000)
-      if (intervals <= 0) continue
-
-      // Precise calculation per 1-hour interval
-      const amount = inv.amount
-      const returnPct = inv.return_percent
-      const durationDays = inv.duration_days
-
-      const totalProfit = amount * (returnPct / 100)
-      const durationSeconds = durationDays * 86400
-      const totalIntervals = durationSeconds / 3600
-      const profitPerInterval = totalProfit / totalIntervals
-
-      const poolPerInterval = profitPerInterval * POOL_RATE
-      const afterPool = profitPerInterval - poolPerInterval
-      const platformFeePerInterval = afterPool * PLATFORM_RATE
-      const netPerInterval = afterPool - platformFeePerInterval
-
-      // Create individual entries for each 1-hour interval
-      const rows = []
-      for (let i = 0; i < intervals; i++) {
-        const entryTime = new Date(lastTime + (i + 1) * 3600000).toISOString()
-        rows.push({
-          user_id: inv.user_id,
-          amount: profitPerInterval,
-          fee: poolPerInterval,
-          platform_fee: platformFeePerInterval,
-          net: netPerInterval,
-          investment_id: inv.id,
-          created_at: entryTime,
-        })
+      if (insertError) {
+        console.error(`Error inserting profit for user ${profile.user_id}:`, insertError)
+        continue
       }
 
-      // Insert in batches of 50 to avoid payload limits
-      for (let i = 0; i < rows.length; i += 50) {
-        const batch = rows.slice(i, i + 50)
-        const { error: insertError } = await supabase.from('profit_history').insert(batch)
-        if (insertError) {
-          console.error(`Error inserting profit batch for investment ${inv.id}:`, insertError)
-        }
-      }
+      // Update user profile balance
+      await supabase.from('profiles').update({
+        profits: profile.profits + netProfit,
+        balance: profile.balance + netProfit,
+      }).eq('user_id', profile.user_id)
 
-      // Accumulate net total for user profile update
-      const totalNet = netPerInterval * intervals
-      if (!userUpdates[inv.user_id]) userUpdates[inv.user_id] = 0
-      userUpdates[inv.user_id] += totalNet
-
-      totalProcessed += intervals
-    }
-
-    // Batch update user profiles
-    for (const [userId, netTotal] of Object.entries(userUpdates)) {
-      if (netTotal > 0) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('profits, balance')
-          .eq('user_id', userId)
-          .single()
-
-        if (profile) {
-          await supabase.from('profiles').update({
-            profits: profile.profits + netTotal,
-            balance: profile.balance + netTotal,
-          }).eq('user_id', userId)
-        }
-      }
+      totalProcessed++
     }
 
     return new Response(
-      JSON.stringify({ message: 'Yields generated', processed: totalProcessed }),
+      JSON.stringify({ message: 'Daily yields generated', processed: totalProcessed, date: today }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   } catch (error) {
-    console.error('Error generating yields:', error)
+    console.error('Error generating daily yields:', error)
     return new Response(
       JSON.stringify({ error: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
