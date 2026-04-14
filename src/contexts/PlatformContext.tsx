@@ -162,14 +162,22 @@ function autoCompleteWithdrawals() {
 // ── Withdrawal eligibility check ─────────────────────────────────
 
 function checkWithdrawEligibility(userId: string): { allowed: boolean; reason: string } {
-  // Check if today is Friday (5 = Friday in JS)
+  // Check if today is the 10th of the month
   const now = new Date();
-  const dayOfWeek = now.getDay();
-  if (dayOfWeek !== 5) {
-    const daysUntilFriday = (5 - dayOfWeek + 7) % 7 || 7;
+  const dayOfMonth = now.getDate();
+  if (dayOfMonth !== 10) {
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    let nextDate: Date;
+    if (dayOfMonth < 10) {
+      nextDate = new Date(currentYear, currentMonth, 10);
+    } else {
+      nextDate = new Date(currentYear, currentMonth + 1, 10);
+    }
+    const daysLeft = Math.ceil((nextDate.getTime() - now.getTime()) / 86400000);
     return {
       allowed: false,
-      reason: `Saques são permitidos apenas às sextas-feiras. Faltam ${daysUntilFriday} dia(s).`,
+      reason: `Saques são permitidos apenas no dia 10 de cada mês. Faltam ${daysLeft} dia(s).`,
     };
   }
 
